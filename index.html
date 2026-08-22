@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>シフト応募</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --primary:#1a73e8;
+  --primary-d:#1557b0;
+  --bg:#eef2f8;
+  --ink:#1f2733;
+  --sub:#7a869a;
+  --line:#e3e8f0;
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;
+  background:var(--bg);color:var(--ink);
+  -webkit-text-size-adjust:100%;
+  display:flex;flex-direction:column;
+  min-height:100dvh;
+  padding:10px 10px 0;
+  padding-top:max(env(safe-area-inset-top,0px),10px);
+}
+.card{
+  background:#fff;border-radius:20px;box-shadow:0 4px 20px rgba(20,40,80,.08);
+  padding:22px 18px max(env(safe-area-inset-bottom,0px),16px);
+  width:100%;margin:0;
+  display:flex;flex-direction:column;flex:1;
+}
+h1{font-size:26px;font-weight:800;color:var(--primary);margin-bottom:6px;letter-spacing:.02em;}
+.greeting{font-size:17px;font-weight:600;color:#3a4453;margin-bottom:6px;}
+.sub{color:var(--sub);font-size:15px;line-height:1.5;margin-bottom:24px;}
+
+.step-label{
+  font-size:16px;font-weight:800;color:#2a3340;
+  margin-bottom:14px;line-height:1.3;
+  padding-left:10px;border-left:4px solid var(--primary);
+}
+
+/* 職種 */
+.job-item{
+  display:flex;align-items:flex-start;gap:14px;
+  padding:18px;
+  border:2px solid var(--line);border-radius:16px;margin-bottom:12px;
+  cursor:pointer;transition:border-color .12s,background .12s,box-shadow .12s;
+}
+.job-item:active{background:#f0f5ff;}
+.job-item.selected{border-color:var(--primary);background:#e8f0fe;box-shadow:0 2px 10px rgba(26,115,232,.12);}
+.job-item input[type=radio]{margin-top:2px;width:24px;height:24px;accent-color:var(--primary);cursor:pointer;flex-shrink:0;}
+.job-item>div{flex:1;min-width:0;}
+.job-name{font-size:19px;font-weight:800;color:var(--ink);overflow-wrap:anywhere;}
+.job-detail{font-size:15px;color:#5b6675;margin-top:6px;line-height:1.6;overflow-wrap:anywhere;}
+
+/* 日程 */
+#date-section{transition:opacity .2s;margin-top:28px;}
+#date-section.disabled{opacity:.35;pointer-events:none;}
+.date-item{
+  display:flex;align-items:center;gap:16px;
+  padding:16px 18px;min-height:62px;
+  border:2px solid var(--line);border-radius:14px;margin-bottom:10px;
+  cursor:pointer;transition:background .12s,border-color .12s;
+}
+.date-item:active{background:#f4f7fb;}
+.date-item.checked{background:#e8f0fe;border-color:var(--primary);}
+.date-item input[type=checkbox]{width:26px;height:26px;accent-color:var(--primary);cursor:pointer;flex-shrink:0;}
+.date-item .date-label{flex:1;min-width:0;font-size:21px;font-weight:600;overflow-wrap:anywhere;}
+.date-item.checked .date-label{color:var(--primary-d);font-weight:800;}
+
+.err{color:#d93025;font-size:15px;font-weight:600;margin:12px 0;display:none;}
+
+.btn{
+  display:block;width:100%;
+  padding:18px;
+  background:var(--primary);color:#fff;border:none;
+  border-radius:16px;font-size:19px;font-weight:800;cursor:pointer;
+  box-shadow:0 4px 14px rgba(26,115,232,.3);
+  transition:background .12s,transform .08s;
+  position:sticky;
+  bottom:max(env(safe-area-inset-bottom,0px),12px);
+  margin-top:16px;
+}
+.btn:active{background:var(--primary-d);transform:scale(.99);}
+.btn:disabled{background:#aab4c2;box-shadow:none;cursor:default;}
+
+/* 完了 */
+#result{display:none;text-align:center;padding:48px 20px;}
+#result h2{font-size:26px;color:#16a34a;margin-bottom:14px;font-weight:800;}
+#result p{color:#4a5563;font-size:16px;line-height:1.7;}
+
+/* 読み込み中・エラー */
+#loading{padding:48px 20px;text-align:center;color:var(--sub);font-size:16px;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div id="loading">読み込み中…</div>
+
+  <div id="form-area" style="display:none;">
+    <h1>&#x1F4C5; シフト応募</h1>
+    <p id="greeting" class="greeting" style="display:none;"></p>
+    <p class="sub">職種を選んでから、希望の日程を選んでください</p>
+
+    <div class="step-label">① 職種を選択</div>
+    <div id="job-list"></div>
+
+    <div id="date-section" class="disabled">
+      <div class="step-label">② 希望日を選択（複数可）</div>
+      <div id="date-list"></div>
+    </div>
+
+    <div class="err" id="err-msg"></div>
+  </div>
+
+  <div id="result">
+    <h2>&#x2705; 応募完了！</h2>
+    <p>以下の日程で応募を受け付けました。<br>確定後にLINEでご連絡します。</p>
+    <div id="result-dates" style="margin-top:16px;"></div>
+  </div>
+
+  <button class="btn" id="submit-btn" onclick="submitApply()" disabled style="display:none;">応募する</button>
+</div>
+
+<script>
+// GAS Web App（doGet/doPostのJSON API）を呼び出す。HTML自体はGASのiframe配信を
+// 経由しないため、実機での画面幅の問題を回避できる。
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbxl-UCiJKoeUZJXOzCkrUujzNvs_jf2hKYnZp7xohIvYipNYD-w_Bznqy-t2w9ldUXJAg/exec';
+var TOKEN = new URLSearchParams(location.search).get('token') || '';
+var JOBS = [];
+var RECRUIT_JOB_ID = '';
+var selectedDates = [];
+var selectedJobId = '';
+
+function showErr(msg) {
+  var el = document.getElementById('err-msg');
+  el.textContent = msg; el.style.display = 'block';
+}
+function hideErr() { document.getElementById('err-msg').style.display = 'none'; }
+
+fetch(GAS_URL + '?page=apply_data&token=' + encodeURIComponent(TOKEN))
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    document.getElementById('loading').style.display = 'none';
+    if (!data.ok) {
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('loading').textContent = data.msg || 'リンクが無効です。LINEから開き直してください。';
+      return;
+    }
+    document.getElementById('form-area').style.display = 'block';
+    document.getElementById('submit-btn').style.display = 'block';
+    init(data);
+  })
+  .catch(function() {
+    document.getElementById('loading').textContent = '読み込みに失敗しました。時間をおいて開き直してください。';
+  });
+
+function init(data) {
+  JOBS = data.jobs || [];
+  RECRUIT_JOB_ID = data.jobId || '';
+
+  if (data.staffName) {
+    var g = document.getElementById('greeting');
+    g.textContent = data.staffName + ' さん、ご確認ください 👋';
+    g.style.display = 'block';
+  }
+
+  var jobHtml = JOBS.map(function(j) {
+    return '<label class="job-item" id="jlabel-' + j.job_id + '">' +
+      '<input type="radio" name="job_sel" value="' + j.job_id + '" onchange="onJobSelect(\'' + j.job_id + '\')">' +
+      '<div>' +
+        '<div class="job-name">' + j.title + '</div>' +
+        '<div class="job-detail">&#x23F0; ' + j.start_time + '&#xFF5E;' + j.end_time +
+          '&#x3000;&#x1F4B4; &#xA5;' + Number(j.wage).toLocaleString() + '&#xFF08;&#x4EA4;&#x901A;&#x8CBB; &#xA5;' + j.transport + '&#xFF09;</div>' +
+      '</div></label>';
+  }).join('');
+  document.getElementById('job-list').innerHTML = jobHtml || '<p style="color:#888;font-size:14px;">&#x8077;&#x7A2E;&#x60C5;&#x5831;&#x304C;&#x3042;&#x308A;&#x307E;&#x305B;&#x3093;</p>';
+
+  var now = new Date();
+  var DOW = ['日','月','火','水','木','金','土'];
+  var dateList = document.getElementById('date-list');
+  var renderDates = [];
+  if (Array.isArray(data.dates) && data.dates.length) {
+    renderDates = data.dates.slice();
+  } else {
+    for (var i = 0; i < 14; i++) {
+      var d0 = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+      renderDates.push(d0.getFullYear() + '-' + String(d0.getMonth()+1).padStart(2,'0') + '-' + String(d0.getDate()).padStart(2,'0'));
+    }
+  }
+  renderDates.forEach(function(ds) {
+    var parts = ds.split('-').map(Number);
+    var d = new Date(parts[0], parts[1]-1, parts[2]);
+    var normalizedDs = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    var label = (d.getMonth()+1) + '/' + d.getDate() + '（' + DOW[d.getDay()] + '）';
+    var item = document.createElement('div');
+    item.className = 'date-item';
+    item.dataset.date = normalizedDs;
+    item.innerHTML = '<input type="checkbox" id="cb-'+normalizedDs+'" value="'+normalizedDs+'"> <label for="cb-'+normalizedDs+'" class="date-label">'+label+'</label>';
+    item.onclick = function(e) {
+      if (e.target.tagName === 'INPUT') return;
+      var cb = this.querySelector('input[type=checkbox]');
+      cb.checked = !cb.checked;
+      this.classList.toggle('checked', cb.checked);
+      updateSelectedDates();
+    };
+    item.querySelector('input').addEventListener('change', function() {
+      this.closest('.date-item').classList.toggle('checked', this.checked);
+      updateSelectedDates();
+    });
+    dateList.appendChild(item);
+  });
+
+  if (JOBS.length === 1) {
+    var sl = document.querySelector('.step-label');
+    if (sl) sl.textContent = '① お仕事';
+    var radio0 = document.querySelector('#job-list input[type=radio]');
+    if (radio0) radio0.style.display = 'none';
+  }
+
+  if (RECRUIT_JOB_ID) {
+    var autoJob = document.querySelector('input[name=job_sel][value="' + RECRUIT_JOB_ID + '"]');
+    if (autoJob) { autoJob.checked = true; onJobSelect(RECRUIT_JOB_ID); }
+  }
+}
+
+function onJobSelect(jobId) {
+  selectedJobId = jobId;
+  JOBS.forEach(function(j) {
+    var lbl = document.getElementById('jlabel-' + j.job_id);
+    if (lbl) lbl.classList.toggle('selected', j.job_id === jobId);
+  });
+  document.getElementById('date-section').classList.remove('disabled');
+  hideErr();
+  updateSelectedDates();
+}
+
+function updateSelectedDates() {
+  selectedDates = [];
+  document.querySelectorAll('.date-item input:checked').forEach(function(cb) {
+    selectedDates.push(cb.value);
+  });
+  document.getElementById('submit-btn').disabled = !(selectedJobId && selectedDates.length > 0);
+}
+
+function submitApply() {
+  if (!selectedJobId) { showErr('まず職種を選んでください'); return; }
+  if (selectedDates.length === 0) { showErr('日程を選んでください'); return; }
+  hideErr();
+  var btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = '送信中…';
+
+  // GASのCORSプリフライトを避けるため text/plain で送る（サーバー側はJSON.parseするだけなので問題ない）
+  fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'apply', token: TOKEN, dates: selectedDates, job_id: selectedJobId }),
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      if (!r.ok) {
+        btn.disabled = false; btn.textContent = '応募する';
+        showErr(r.msg || '応募を受け付けられませんでした。お手数ですが、LINEから応募フォームを開き直してください。');
+        return;
+      }
+      if (!r.added || r.added.length === 0) {
+        btn.disabled = false; btn.textContent = '応募する';
+        showErr('選んだ日程はすでに応募済みです。');
+        return;
+      }
+      var DOW = ['日','月','火','水','木','金','土'];
+      var dateLabels = (r.added || selectedDates).map(function(ds) {
+        var parts = ds.split('-').map(Number);
+        var d = new Date(parts[0], parts[1]-1, parts[2]);
+        return parts[1]+'/'+parts[2]+'（'+DOW[d.getDay()]+'）';
+      });
+      document.getElementById('form-area').style.display = 'none';
+      document.getElementById('submit-btn').style.display = 'none';
+      document.getElementById('result').style.display = 'block';
+      document.getElementById('result-dates').innerHTML = dateLabels.map(function(l) {
+        return '<div style="background:#e8f5e9;border-radius:8px;padding:10px 14px;margin-top:10px;color:#2e7d32;font-size:16px;font-weight:700;">'+l+'</div>';
+      }).join('');
+    })
+    .catch(function(err) {
+      btn.disabled = false; btn.textContent = '応募する';
+      showErr('エラーが発生しました: ' + err.message);
+    });
+}
+</script>
+</body>
+</html>
