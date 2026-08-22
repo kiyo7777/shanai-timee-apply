@@ -67,6 +67,11 @@ h1{font-size:26px;font-weight:800;color:var(--primary);margin-bottom:6px;letter-
 .date-item input[type=checkbox]{width:26px;height:26px;accent-color:var(--primary);cursor:pointer;flex-shrink:0;}
 .date-item .date-label{flex:1;min-width:0;font-size:21px;font-weight:600;overflow-wrap:anywhere;}
 .date-item.checked .date-label{color:var(--primary-d);font-weight:800;}
+.date-item.status-locked{cursor:default;background:#f5f6f8;}
+.date-item.status-locked .date-label{color:#8b95a3;}
+.status-badge{font-size:13px;font-weight:800;padding:4px 10px;border-radius:20px;flex-shrink:0;}
+.status-badge.applied{color:#a15c00;background:#fff2df;}
+.status-badge.approved{color:#166534;background:#dcfce7;}
 
 .err{color:#d93025;font-size:15px;font-weight:600;margin:12px 0;display:none;}
 
@@ -188,14 +193,27 @@ function init(data) {
       renderDates.push(d0.getFullYear() + '-' + String(d0.getMonth()+1).padStart(2,'0') + '-' + String(d0.getDate()).padStart(2,'0'));
     }
   }
+  var dateStatus = data.dateStatus || {};
+  var STATUS_LABEL = { applied: '応募中', approved: '確定' };
   renderDates.forEach(function(ds) {
     var parts = ds.split('-').map(Number);
     var d = new Date(parts[0], parts[1]-1, parts[2]);
     var normalizedDs = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     var label = (d.getMonth()+1) + '/' + d.getDate() + '（' + DOW[d.getDay()] + '）';
+    var status = dateStatus[normalizedDs];
     var item = document.createElement('div');
     item.className = 'date-item';
     item.dataset.date = normalizedDs;
+
+    if (status && STATUS_LABEL[status]) {
+      // 応募済み・確定済みの日程は選択できないようにし、状態バッジを表示する
+      item.classList.add('status-locked');
+      item.innerHTML = '<span class="date-label" style="color:#8b95a3;">'+label+'</span>' +
+        '<span class="status-badge ' + status + '">' + STATUS_LABEL[status] + '</span>';
+      dateList.appendChild(item);
+      return;
+    }
+
     item.innerHTML = '<input type="checkbox" id="cb-'+normalizedDs+'" value="'+normalizedDs+'"> <label for="cb-'+normalizedDs+'" class="date-label">'+label+'</label>';
     item.onclick = function(e) {
       if (e.target.tagName === 'INPUT') return;
