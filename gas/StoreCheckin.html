@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>チェックイン</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:#1a73e8;min-height:100vh;padding:16px;}
+.header{text-align:center;padding:16px 0 12px;}
+.company{font-size:13px;color:rgba(255,255,255,.7);margin-bottom:4px;}
+.clock{font-size:36px;font-weight:700;color:#fff;letter-spacing:2px;}
+.list{display:flex;flex-direction:column;gap:10px;max-width:480px;margin:0 auto;}
+.staff-btn{
+  display:block;width:100%;padding:18px 20px;
+  font-size:18px;font-weight:700;color:#1a1a2e;
+  background:#fff;border:none;border-radius:14px;
+  cursor:pointer;text-align:left;
+  box-shadow:0 2px 8px rgba(0,0,0,.15);
+  transition:opacity .1s,transform .1s;
+  -webkit-tap-highlight-color:transparent;
+}
+.staff-btn:active{opacity:.7;transform:scale(.98);}
+.staff-btn:disabled{opacity:.4;cursor:default;}
+
+/* 結果オーバーレイ */
+#overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.65);
+  align-items:center;justify-content:center;
+  z-index:100;
+}
+#overlay.show{display:flex;}
+.result-card{
+  background:#fff;border-radius:20px;
+  padding:36px 28px;max-width:320px;width:90%;
+  text-align:center;
+}
+.result-icon{font-size:56px;margin-bottom:10px;}
+.result-name{font-size:22px;font-weight:800;color:#1a1a2e;margin-bottom:6px;}
+.result-msg{font-size:15px;color:#555;line-height:1.6;}
+.result-ok{color:#0f7c56;font-weight:700;}
+.result-err{color:#d93025;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="company"><?= company ?></div>
+  <div class="clock" id="clock">--:--</div>
+</div>
+
+<div class="list" id="staff-list"></div>
+
+<div id="overlay">
+  <div class="result-card">
+    <div class="result-icon" id="r-icon"></div>
+    <div class="result-name" id="r-name"></div>
+    <div class="result-msg"  id="r-msg"></div>
+  </div>
+</div>
+
+<script>
+var STAFF = <?!= staffJson ?>;
+
+// 時計
+function pad(n){return String(n).padStart(2,'0');}
+function tick(){
+  var d=new Date();
+  document.getElementById('clock').textContent=pad(d.getHours())+':'+pad(d.getMinutes());
+}
+tick(); setInterval(tick,15000);
+
+// 名前カード生成
+var list=document.getElementById('staff-list');
+STAFF.forEach(function(s){
+  var btn=document.createElement('button');
+  btn.className='staff-btn';
+  btn.textContent=s.name;
+  btn.addEventListener('click',function(){onTap(s.line_user_id,btn);});
+  list.appendChild(btn);
+});
+
+function onTap(userId,btn){
+  // 全ボタン無効化（二重送信防止）
+  document.querySelectorAll('.staff-btn').forEach(function(b){b.disabled=true;});
+
+  google.script.run
+    .withSuccessHandler(function(json){
+      var r=JSON.parse(json);
+      showResult(r);
+    })
+    .withFailureHandler(function(e){
+      showResult({type:'error',name:'',msg:e.message||'エラーが発生しました'});
+    })
+    .api_processCheckinWeb(userId);
+}
+
+function showResult(r){
+  var icon=document.getElementById('r-icon');
+  var name=document.getElementById('r-name');
+  var msg =document.getElementById('r-msg');
+
+  if(r.type==='checkin'){
+    icon.textContent='☀️';
+    name.textContent=(r.name||'')+'さん';
+    msg.innerHTML='<span class="result-ok">チェックイン完了！</span><br>おはようございます🙏';
+  } else if(r.type==='checkout'){
+    icon.textContent='🌙';
+    name.textContent=(r.name||'')+'さん';
+    msg.innerHTML='<span class="result-ok">チェックアウト完了！</span><br>'+
+      'お疲れさまでした😊<br>実働 '+r.actual_hours+'時間 / 手取り ¥'+Number(r.net_pay||0).toLocaleString();
+  } else if(r.type==='already_done'){
+    icon.textContent='✅';
+    name.textContent=(r.name||'')+'さん';
+    msg.textContent='本日の勤務は完了しています';
+  } else {
+    icon.textContent='❌';
+    name.textContent=r.name||'';
+    msg.innerHTML='<span class="result-err">'+(r.msg||'エラーが発生しました')+'</span>';
+  }
+
+  document.getElementById('overlay').classList.add('show');
+
+  // 3秒後に自動的に戻る
+  setTimeout(function(){
+    document.getElementById('overlay').classList.remove('show');
+    document.querySelectorAll('.staff-btn').forEach(function(b){b.disabled=false;});
+  }, 3000);
+}
+</script>
+</body>
+</html>

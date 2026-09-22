@@ -1,0 +1,15 @@
+{
+  "name": "shanai-timee-apply",
+  "private": true,
+  "version": "1.0.0",
+  "description": "社内タイミー - シフト応募フォーム（静的HTML）と Google Apps Script バックエンド",
+  "scripts": {
+    "gas:login": "clasp login",
+    "gas:pull": "clasp pull",
+    "gas:push": "clasp push",
+    "gas:open": "clasp open"
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.4.1"
+  }
+}

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>スキャンチェックイン</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:#1a1a2e;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;}
+.company{color:#aaa;font-size:13px;margin-bottom:12px;}
+.scanner-wrap{position:relative;width:100%;max-width:480px;}
+#video{width:100%;border-radius:12px;display:block;}
+.overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+.scan-box{width:200px;height:200px;border:3px solid #1a73e8;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);}
+#result-panel{display:none;background:#fff;border-radius:16px;padding:28px 24px;max-width:360px;width:100%;text-align:center;margin-top:20px;}
+.result-icon{font-size:52px;margin-bottom:8px;}
+.result-name{font-size:22px;font-weight:800;color:#1a1a2e;margin-bottom:6px;}
+.result-detail{font-size:15px;color:#555;}
+.result-ok{color:#0f7c56;font-weight:700;}
+.result-ng{color:#d93025;}
+#sleep-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);color:#fff;font-size:18px;align-items:center;justify-content:center;flex-direction:column;gap:16px;cursor:pointer;z-index:100;}
+#init-msg{color:#aaa;font-size:15px;margin-top:12px;}
+</style>
+</head>
+<body>
+<div class="company"><?= company ?></div>
+<div class="scanner-wrap">
+  <video id="video" autoplay playsinline muted></video>
+  <div class="overlay"><div class="scan-box"></div></div>
+</div>
+<div id="init-msg">カメラを起動中...</div>
+<div id="result-panel">
+  <div class="result-icon" id="result-icon"></div>
+  <div class="result-name" id="result-name"></div>
+  <div class="result-detail" id="result-detail"></div>
+</div>
+<div id="sleep-overlay" onclick="wakeCamera()">
+  <div style="font-size:48px;">📷</div>
+  <div>タップしてカメラを起動</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script>
+var _scanning = false;
+var _processing = false;
+var _sleepTimer = null;
+var _stream = null;
+var _canvas = document.createElement('canvas');
+var _ctx = _canvas.getContext('2d');
+var SLEEP_MS = 30000;
+var RESULT_MS = 3000;
+
+google.script.run
+  .withSuccessHandler(function(j) {
+    var r = JSON.parse(j);
+    document.getElementById('init-msg').style.display = 'none';
+    if (!r.enabled) {
+      document.getElementById('result-panel').style.display = 'block';
+      document.getElementById('result-icon').textContent = '⛔';
+      document.getElementById('result-name').textContent = '機能が無効です';
+      document.getElementById('result-detail').textContent = '管理画面 > 書類タブから有効にしてください';
+      return;
+    }
+    startCamera();
+  })
+  .withFailureHandler(function() {
+    document.getElementById('init-msg').style.display = 'none';
+    startCamera();
+  })
+  .api_getQrCheckinEnabled();
+
+function startCamera() {
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(function(stream) {
+      _stream = stream;
+      var v = document.getElementById('video');
+      v.srcObject = stream;
+      v.play();
+      _scanning = true;
+      requestAnimationFrame(tick);
+      resetSleepTimer();
+    })
+    .catch(function(e) {
+      document.getElementById('result-panel').style.display = 'block';
+      document.getElementById('result-icon').textContent = '❌';
+      document.getElementById('result-name').textContent = 'カメラを起動できません';
+      document.getElementById('result-detail').textContent = e.message || '';
+    });
+}
+
+function stopCamera() {
+  _scanning = false;
+  if (_stream) {
+    _stream.getTracks().forEach(function(t) { t.stop(); });
+    _stream = null;
+  }
+}
+
+function wakeCamera() {
+  document.getElementById('sleep-overlay').style.display = 'none';
+  startCamera();
+}
+
+function resetSleepTimer() {
+  clearTimeout(_sleepTimer);
+  _sleepTimer = setTimeout(function() {
+    stopCamera();
+    document.getElementById('sleep-overlay').style.display = 'flex';
+  }, SLEEP_MS);
+}
+
+function tick() {
+  if (!_scanning) return;
+  var v = document.getElementById('video');
+  if (v.readyState === v.HAVE_ENOUGH_DATA) {
+    _canvas.width = v.videoWidth;
+    _canvas.height = v.videoHeight;
+    _ctx.drawImage(v, 0, 0, _canvas.width, _canvas.height);
+    var img = _ctx.getImageData(0, 0, _canvas.width, _canvas.height);
+    var code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+    if (code && !_processing) {
+      var uid = extractUid(code.data);
+      if (uid) {
+        _processing = true;
+        _scanning = false;
+        processCheckin(uid);
+      }
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+function extractUid(text) {
+  try {
+    var url = new URL(text);
+    return url.searchParams.get('uid') || '';
+  } catch(e) { return ''; }
+}
+
+function processCheckin(uid) {
+  resetSleepTimer();
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showResult(r);
+      scheduleReset();
+    })
+    .withFailureHandler(function(e) {
+      showResult({ type: 'error', name: 'エラー', msg: e.message || '' });
+      scheduleReset();
+    })
+    .api_processCheckinWeb(uid);
+}
+
+function scheduleReset() {
+  setTimeout(function() {
+    hideResult();
+    _processing = false;
+    _scanning = true;
+    requestAnimationFrame(tick);
+  }, RESULT_MS);
+}
+
+function showResult(r) {
+  var panel = document.getElementById('result-panel');
+  var icon  = document.getElementById('result-icon');
+  var name  = document.getElementById('result-name');
+  var detail = document.getElementById('result-detail');
+  panel.style.display = 'block';
+  if (r.type === 'checkin') {
+    icon.textContent = '✅';
+    name.textContent = (r.name || '') + ' さん';
+    detail.innerHTML = '<span class="result-ok">おはようございます！</span>';
+  } else if (r.type === 'checkout') {
+    icon.textContent = '👋';
+    name.textContent = (r.name || '') + ' さん';
+    detail.innerHTML = '<span class="result-ok">おつかれさまでした！ 実働 ' + r.actual_hours + '時間</span>';
+  } else if (r.type === 'already_done') {
+    icon.textContent = 'ℹ️';
+    name.textContent = (r.name || '') + ' さん';
+    detail.textContent = '本日の勤務は完了しています';
+  } else {
+    icon.textContent = '❌';
+    name.textContent = r.name || '不明なQR';
+    detail.innerHTML = '<span class="result-ng">' + (r.msg || 'スキャン失敗') + '</span>';
+  }
+}
+
+function hideResult() {
+  document.getElementById('result-panel').style.display = 'none';
+}
+</script>
+</body>
+</html>

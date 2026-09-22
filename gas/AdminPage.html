@@ -1,0 +1,2427 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>社内タイミー</title>
+<style>
+/* ─── Reset ─── */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --primary:#1e6b5a;
+  --primary-lt:#eef7f4;
+  --primary-dk:#155048;
+  --accent:#c5a059;
+  --accent-lt:#fef9ef;
+  --recruit-color:#d97706;
+  --danger:#b3261e;
+  --danger-lt:#fce8e6;
+  --bg:#f5f3ee;
+  --card:#fff;
+  --txt:#1a1a1a;
+  --sub:#666;
+  --line:#e0d9cf;
+  --radius-md:12px;
+  --hh:64px;
+  --nh:48px;
+  --th:52px;
+}
+body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;background:var(--bg);color:var(--txt);font-size:17px;min-height:100vh;}
+
+/* ─── Header ─── */
+#hd{position:fixed;top:0;left:0;right:0;height:var(--hh);background:var(--primary);color:#fff;display:flex;align-items:center;padding:0 16px;z-index:300;box-shadow:0 2px 8px rgba(0,0,0,.25);}
+#hd-title{flex:1;font-size:19px;font-weight:700;letter-spacing:.2px;}
+#hd-total{font-size:15px;font-weight:700;color:rgba(255,255,255,.92);margin-right:10px;white-space:nowrap;letter-spacing:.3px;}
+#hd-refresh{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 14px;border-radius:20px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;}
+
+/* ─── Top Nav ─── */
+#top-nav{position:fixed;top:var(--hh);left:0;right:0;height:var(--nh);background:var(--card);border-bottom:1.5px solid var(--line);display:flex;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.tnav-btn{flex:1;font-size:16px;font-weight:600;color:var(--sub);border:none;background:none;cursor:pointer;font-family:inherit;position:relative;padding:0;}
+.tnav-btn.on{color:var(--primary);}
+.tnav-btn.on::after{content:'';position:absolute;bottom:0;left:16%;right:16%;height:2.5px;background:var(--primary);border-radius:4px 4px 0 0;}
+.tnav-bdg{display:inline-block;background:var(--danger);color:#fff;font-size:12px;font-weight:700;border-radius:8px;padding:1px 5px;min-width:16px;text-align:center;margin-left:3px;vertical-align:middle;}
+
+/* ─── Toolbar ─── */
+#toolbar{position:fixed;top:calc(var(--hh) + var(--nh));left:0;right:0;height:var(--th);background:var(--card);border-bottom:1px solid var(--line);z-index:190;display:flex;align-items:center;padding:0 10px;gap:8px;}
+#toolbar-month{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.cal-nav{background:none;border:1.5px solid var(--line);border-radius:50%;width:44px;height:44px;font-size:19px;color:var(--primary);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+#cal-title{font-size:17px;font-weight:700;min-width:72px;text-align:center;}
+#toolbar-actions{display:flex;align-items:center;gap:6px;flex:1;overflow-x:auto;scrollbar-width:none;}
+#toolbar-actions::-webkit-scrollbar{display:none;}
+.tb-btn{white-space:nowrap;padding:6px 12px;border-radius:20px;border:1.5px solid var(--line);background:#fff;font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:inherit;color:var(--txt);}
+.tb-btn-recruit{background:var(--recruit-color);color:#fff;border-color:var(--recruit-color);}
+.tb-btn-primary{background:var(--primary);color:#fff;border-color:var(--primary);}
+.tb-btn-accent{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+/* ─── Main ─── */
+#main{padding-bottom:24px;}
+#main.with-toolbar{margin-top:calc(var(--hh) + var(--nh) + var(--th));}
+#main.no-toolbar{margin-top:calc(var(--hh) + var(--nh));}
+.page{display:none;padding:10px;}
+.page.active{display:block;}
+
+/* ─── Calendar ─── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.cal-dow{text-align:center;font-size:13px;font-weight:700;color:var(--sub);padding:4px 0;}
+.cal-dow:first-child{color:var(--danger);}
+.cal-dow:last-child{color:#1a73e8;}
+.cal-cell{min-height:96px;border-radius:8px;padding:4px 3px;border:1.5px solid transparent;background:#fafaf8;overflow:hidden;cursor:pointer;}
+.cal-cell.selected{border-color:var(--primary)!important;box-shadow:0 0 0 1px var(--primary);}
+.cal-cell.today{background:var(--primary-lt);border-color:#9eccc4;}
+.cal-cell.unpaid{background:var(--danger-lt);border-color:#f1a8a4;}
+.cal-cell.future{border-color:#9eccc4;}
+.cal-cell.wait{border-color:#f0c96c;}
+.cal-cell.cal-sun .cal-date{color:var(--danger);}
+.cal-cell.cal-sat .cal-date{color:#1a73e8;}
+.cal-date{font-size:14px;font-weight:700;color:var(--sub);line-height:1.4;}
+.today-circle{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:var(--primary);color:#fff;border-radius:50%;font-size:14px;font-weight:700;}
+
+/* ─── Chips ─── */
+.s-chip{font-size:14px;border-radius:5px;padding:3px 5px;margin-top:3px;font-weight:700;overflow:hidden;}
+.s-chip-name{font-size:14px;font-weight:700;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:100%;display:block;cursor:pointer;}
+.s-chip-tag{font-size:12px;font-weight:700;padding:1px 4px;border-radius:3px;display:inline-block;white-space:nowrap;}
+.s-chip-row{display:flex;align-items:center;gap:3px;width:100%;min-width:0;}
+.chip-cb{width:12px;height:12px;flex-shrink:0;cursor:pointer;accent-color:var(--primary);}
+.chip-pay-btn{font-size:12px;font-weight:700;padding:5px 8px;border-radius:4px;border:none;cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:inherit;line-height:1.4;}
+/* State classes */
+.chip-past{background:#f1f3f4;color:#555;}
+.chip-past .s-chip-tag{background:#ccc;color:#555;}
+.chip-unpaid{background:var(--danger-lt);color:var(--danger);}
+.chip-unpaid .s-chip-tag{background:var(--danger);color:#fff;}
+.chip-today{background:var(--primary);color:#fff;}
+.chip-today .s-chip-tag{background:rgba(255,255,255,.25);color:#fff;}
+.chip-future{background:var(--primary-lt);color:var(--primary-dk);}
+.chip-future .s-chip-tag{background:var(--primary);color:#fff;}
+.chip-wait{background:var(--accent-lt);color:#7a5a00;}
+.chip-wait .s-chip-tag{background:var(--recruit-color);color:#fff;}
+.chip-wait.chip-sel{background:var(--primary-lt);border-left:3px solid var(--primary);color:var(--primary-dk);}
+.chip-wait.chip-sel .s-chip-tag{background:var(--primary);color:#fff;}
+.chip-cancel{background:#f5f5f5;color:#aaa;opacity:0.75;}
+.chip-cancel .s-chip-tag{background:#bbb;color:#fff;}
+
+/* ─── Unpaid bar ─── */
+#cal-unpaid-bar{background:var(--danger-lt);border-left:3px solid var(--danger);border-radius:8px;padding:8px 12px;font-size:15px;font-weight:600;color:var(--danger);margin-bottom:8px;display:none;}
+
+/* ─── Legend ─── */
+.cal-legend{display:flex;gap:10px;flex-wrap:wrap;padding:6px 2px 0;margin-top:4px;}
+.leg-item{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--sub);}
+.leg-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+
+/* ─── Floating bars ─── */
+#approve-bar{display:none;position:fixed;bottom:8px;left:10px;right:10px;background:var(--primary);color:#fff;border-radius:var(--radius-md);padding:12px 16px;z-index:400;box-shadow:0 4px 16px rgba(0,0,0,.2);align-items:center;gap:10px;}
+#approve-bar.on{display:flex;}
+#approve-cnt{flex:1;font-size:16px;font-weight:700;}
+#approve-clear{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 12px;border-radius:20px;font-size:15px;cursor:pointer;font-family:inherit;}
+#approve-go{background:var(--accent);border:none;color:#fff;padding:9px 18px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;}
+#bulk-pay-bar{display:none;position:fixed;bottom:8px;left:10px;right:10px;background:var(--primary-dk);color:#fff;border-radius:var(--radius-md);padding:12px 16px;z-index:400;box-shadow:0 4px 16px rgba(0,0,0,.25);align-items:center;gap:10px;}
+#bulk-pay-bar.on{display:flex;}
+#bulk-pay-cnt{flex:1;font-size:16px;font-weight:700;}
+#bulk-pay-clear{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 12px;border-radius:20px;font-size:15px;cursor:pointer;font-family:inherit;}
+#bulk-pay-go{background:var(--accent);border:none;color:#fff;padding:9px 18px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;}
+
+/* ─── Card ─── */
+.card{background:var(--card);border-radius:14px;padding:16px 15px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+.card-ttl{font-size:13px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--sub);margin-bottom:12px;}
+
+/* ─── Roster ─── */
+.rf-row{display:flex;gap:8px;overflow-x:auto;margin-bottom:12px;scrollbar-width:none;}
+.rf-row::-webkit-scrollbar{display:none;}
+.rf-btn{white-space:nowrap;padding:7px 16px;border-radius:20px;border:1.5px solid var(--line);background:#fff;font-size:15px;font-weight:600;cursor:pointer;flex-shrink:0;color:var(--sub);font-family:inherit;}
+.rf-btn.on{background:var(--primary);color:#fff;border-color:var(--primary);}
+.scard{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--card);border-radius:14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);cursor:pointer;}
+.sav{width:44px;height:44px;border-radius:50%;background:var(--primary-lt);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:var(--primary);flex-shrink:0;}
+.sinfo{flex:1;min-width:0;}
+.sname{font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.smeta{font-size:14px;color:var(--sub);margin-top:2px;}
+.sbdg{display:inline-block;padding:2px 8px;border-radius:20px;font-size:13px;font-weight:700;}
+.sbdg-red{background:var(--danger-lt);color:var(--danger);}
+.sbdg-gold{background:var(--accent-lt);color:#7a5a00;}
+
+/* ─── Modals ─── */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;align-items:center;justify-content:center;}
+.ov.on{display:flex;}
+.mo{background:#fff;border-radius:var(--radius-md);padding:24px;width:90%;max-width:360px;max-height:85vh;overflow-y:auto;}
+.mot{font-size:19px;font-weight:700;margin-bottom:16px;}
+.mo-actions{display:flex;align-items:center;gap:10px;margin-top:20px;}
+.mo-cancel{background:none;border:none;color:var(--sub);font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;padding:8px 4px;flex-shrink:0;}
+.mo-ok{flex:1;padding:12px;border:none;border-radius:10px;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;color:#fff;background:var(--primary);}
+.mo-ok-recruit{background:var(--recruit-color);}
+.mo-ok-danger{background:var(--danger);}
+
+/* ─── Form ─── */
+.fl{font-size:15px;font-weight:700;color:var(--sub);display:block;margin-bottom:5px;}
+.fi{width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:17px;background:#fff;outline:none;font-family:inherit;}
+.fi:focus{border-color:var(--primary);}
+.fr{margin-bottom:13px;}
+
+/* ─── Staff Slide-in ─── */
+#staff-modal{position:fixed;top:0;right:-100%;width:100%;height:100%;background:#fff;z-index:500;transition:right .3s cubic-bezier(.25,.8,.25,1);display:flex;flex-direction:column;overflow:hidden;}
+#staff-modal.open{right:0;}
+#sm-header{background:var(--primary);color:#fff;padding:0 14px;height:var(--hh);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+#sm-back{background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:4px;line-height:1;}
+#sm-name{flex:1;font-size:18px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#sm-msg{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;padding:6px 11px;border-radius:20px;font-size:14px;cursor:pointer;font-family:inherit;font-weight:600;white-space:nowrap;}
+.staff-tabs{display:flex;border-bottom:2px solid var(--line);background:#fff;flex-shrink:0;}
+.staff-tab{flex:1;padding:11px 4px;font-size:15px;font-weight:600;color:var(--sub);border:none;background:none;cursor:pointer;font-family:inherit;border-bottom:2.5px solid transparent;margin-bottom:-2px;}
+.staff-tab.on{color:var(--primary);border-bottom-color:var(--primary);}
+#sm-body{flex:1;overflow-y:auto;padding:16px 14px;}
+
+/* ─── Buttons ─── */
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 18px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;}
+.btn-w{width:100%;display:flex;margin-bottom:10px;}
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-accent{background:var(--accent);color:#fff;}
+.btn-outline{background:#fff;border:1.5px solid var(--line);color:var(--txt);}
+.btn-sm{padding:7px 12px;font-size:15px;}
+
+/* ─── Table / Misc ─── */
+.tbl{width:100%;border-collapse:collapse;font-size:15px;}
+.tbl th{padding:7px 8px;text-align:left;color:var(--sub);font-size:13px;font-weight:700;border-bottom:2px solid var(--line);}
+.tbl td{padding:10px 8px;border-bottom:1px solid var(--line);}
+.sumrow{display:flex;gap:8px;margin-bottom:14px;}
+.sumc{flex:1;background:var(--card);border-radius:12px;padding:12px 8px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+.sumn{font-size:26px;font-weight:800;color:var(--primary);line-height:1;}
+.suml{font-size:13px;color:var(--sub);margin-top:4px;font-weight:600;}
+.stitle{font-size:13px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--sub);margin:14px 0 8px;}
+.warn{background:#fffbeb;border-left:3px solid var(--accent);border-radius:8px;padding:11px 13px;font-size:15px;color:#7a5a00;margin-bottom:12px;}
+.empty{text-align:center;padding:36px 20px;color:var(--sub);font-size:17px;}
+
+/* ─── Eval ─── */
+.scrow{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.scl{flex:1;font-size:16px;}
+.scbs{display:flex;gap:3px;}
+.scb{width:34px;height:34px;border-radius:8px;border:1.5px solid var(--line);background:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;}
+.scb.on{background:var(--primary);color:#fff;border-color:var(--primary);}
+
+/* ─── Staff Cards ─── */
+.staff-card{padding:10px 8px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);cursor:pointer;font-size:15px;font-weight:700;text-align:center;transition:border-color .15s,background .15s;}
+.staff-card:active{opacity:.8;}
+.staff-card.sel{background:var(--primary-lt);border-color:var(--primary);color:var(--primary);}
+.staff-card-av{width:30px;height:30px;border-radius:50%;background:#e8e8e8;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:var(--sub);margin:0 auto 5px;}
+.staff-card.sel .staff-card-av{background:var(--primary);color:#fff;}
+
+/* ─── Roster search ─── */
+#roster-search-wrap{margin-bottom:10px;}
+
+/* ─── System ─── */
+#toast{position:fixed;bottom:14px;left:10px;right:10px;background:#1a1a1a;color:#fff;padding:11px 16px;border-radius:10px;font-size:16px;font-weight:600;display:none;z-index:800;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.3);}
+#loader-overlay{position:fixed;inset:0;background:rgba(30,107,90,.88);z-index:900;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;}
+#loader-overlay.on{display:flex;}
+.lspin{width:44px;height:44px;border:4px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;}
+.ltxt{color:#fff;font-size:16px;font-weight:600;}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<script>var WEB_APP_URL='<?= webAppUrl ?>';</script>
+
+<!-- Header -->
+<div id="hd">
+  <div id="hd-title">🌿 社内タイミー</div>
+  <div id="hd-total"></div>
+  <button id="hd-refresh" onclick="loadAll()">↺ 更新</button>
+</div>
+
+<!-- Top Nav -->
+<nav id="top-nav">
+  <button class="tnav-btn on" id="tnav-shift" onclick="showPage('shift',this)">シフト</button>
+  <button class="tnav-btn" id="tnav-roster" onclick="showPage('roster',this)">名簿</button>
+  <button class="tnav-btn" id="tnav-docs" onclick="showPage('docs',this)">書類</button>
+</nav>
+
+<!-- Toolbar (shift page only) -->
+<div id="toolbar">
+  <div id="toolbar-month">
+    <button class="cal-nav" onclick="prevMonth()">‹</button>
+    <span id="cal-title"></span>
+    <button class="cal-nav" onclick="nextMonth()">›</button>
+  </div>
+  <div id="toolbar-actions">
+    <button class="tb-btn tb-btn-recruit" onclick="openRecruit()">📢 LINE募集</button>
+    <button class="tb-btn" onclick="openAssign()">＋ 直接割当</button>
+  </div>
+</div>
+
+<!-- 選択日バー -->
+<div id="sel-bar" style="display:none;position:fixed;top:calc(var(--hh) + var(--nh) + var(--th));left:0;right:0;background:var(--primary);color:#fff;z-index:185;padding:6px 12px;font-size:14px;font-weight:600;align-items:center;gap:8px;flex-wrap:wrap;">
+  <span id="sel-bar-label" style="flex:1;line-height:1.4;"></span>
+  <button onclick="clearSelDates()" style="background:rgba(255,255,255,.25);border:none;color:#fff;border-radius:12px;padding:3px 10px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;">✕ クリア</button>
+</div>
+
+<!-- Main -->
+<main id="main" class="with-toolbar">
+
+<!-- シフトページ -->
+<div id="page-shift" class="page active">
+  <div id="cal-unpaid-bar" onclick="jumpToDocsUnpaid()" style="cursor:pointer;"></div>
+  <div class="cal-grid" style="margin-bottom:3px;">
+    <div class="cal-dow">日</div><div class="cal-dow">月</div><div class="cal-dow">火</div>
+    <div class="cal-dow">水</div><div class="cal-dow">木</div><div class="cal-dow">金</div>
+    <div class="cal-dow">土</div>
+  </div>
+  <div class="cal-grid" id="cal-grid"></div>
+  <div class="cal-legend">
+    <span class="leg-item"><span class="leg-dot" style="background:var(--accent-lt);border:1px solid var(--recruit-color);"></span>承認待</span>
+    <span class="leg-item"><span class="leg-dot" style="background:var(--primary-lt);border:1px solid #9eccc4;"></span>予定</span>
+    <span class="leg-item"><span class="leg-dot" style="background:var(--primary);"></span>本日</span>
+    <span class="leg-item"><span class="leg-dot" style="background:var(--danger-lt);border:1px solid #f1a8a4;"></span>未払</span>
+    <span class="leg-item"><span class="leg-dot" style="background:#f1f3f4;"></span>履歴</span>
+  </div>
+</div>
+
+<!-- 名簿ページ -->
+<div id="page-roster" class="page">
+  <div id="roster-search-wrap">
+    <input type="text" id="roster-search" class="fi" placeholder="🔍 名前で検索..." oninput="renderRoster()" style="font-size:16px;">
+  </div>
+  <div class="rf-row">
+    <button class="rf-btn on" onclick="filterRoster('all',this)">全員</button>
+    <button class="rf-btn" onclick="filterRoster('named',this)">登録済み</button>
+    <button class="rf-btn" onclick="filterRoster('noname',this)">未登録</button>
+    <button class="rf-btn" onclick="filterRoster('unpaid',this)">未払いあり</button>
+    <button class="rf-btn" onclick="filterRoster('caution',this)">⚠️ 要注意</button>
+  </div>
+  <div style="margin:8px 0;">
+    <button class="btn btn-outline btn-sm btn-w" onclick="sendProfileLinkAll()">📝 全スタッフに登録フォームを一斉送信</button>
+    <div id="profile-link-all-result" style="font-size:13px;margin-top:6px;"></div>
+  </div>
+  <select id="job-filter-sel" class="fi" style="width:100%;font-size:14px;margin-bottom:10px;" onchange="filterJobRoster(this.value)">
+    <option value="">💼 全職種</option>
+  </select>
+  <!-- 職種別 時給（職種選択時のみ表示） -->
+  <div id="job-rate-inline-wrap" style="display:none;margin:8px 0 4px;background:var(--card);border-radius:10px;border:1px solid var(--line);padding:12px;">
+    <div id="job-rate-list-inline"></div>
+  </div>
+
+  <div id="roster-list"></div>
+</div>
+
+<!-- 書類ページ -->
+<div id="page-docs" class="page">
+
+  <!-- サブタブ -->
+  <div class="staff-tabs" style="margin:-10px -10px 10px;padding:0 10px;">
+    <button class="staff-tab on" id="dstab-kojin"   onclick="showDocsSub('kojin',this)">個人</button>
+    <button class="staff-tab"    id="dstab-monthly" onclick="showDocsSub('monthly',this)">月次</button>
+    <button class="staff-tab"    id="dstab-all"     onclick="showDocsSub('all',this)">全体</button>
+  </div>
+
+  <!-- ── 個人 ────────────────────────────────── -->
+  <div id="docs-sub-kojin">
+    <div class="card">
+      <div class="card-ttl">スタッフ選択</div>
+      <div class="fr" style="margin-bottom:0;"><label class="fl">スタッフ</label><select id="doc-user" class="fi"></select></div>
+    </div>
+    <div class="card">
+      <div class="card-ttl">月次書類</div>
+      <div class="fr"><label class="fl">対象月</label><input type="month" id="doc-month" class="fi"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="genPayslip()">賃金台帳 PDF</button>
+        <button class="btn btn-outline btn-sm" style="padding:0 12px;" onclick="openDocFolder('賃金台帳')">📁</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="genAttendance()">出勤簿 PDF</button>
+        <button class="btn btn-outline btn-sm" style="padding:0 12px;" onclick="openDocFolder('出勤簿')">📁</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-ttl">日次書類</div>
+      <div class="fr"><label class="fl">対象日</label><input type="date" id="doc-date" class="fi"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="genReceipt()">領収書 PDF</button>
+        <button class="btn btn-outline btn-sm" style="padding:0 12px;" onclick="openDocFolder('領収書')">📁</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-ttl">年次書類</div>
+      <div class="fr"><label class="fl">対象年</label><input type="number" id="doc-year" class="fi" min="2024" max="2035" placeholder="2026"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="genPaymentReport()">支払調書 PDF</button>
+        <button class="btn btn-outline btn-sm" style="padding:0 12px;" onclick="openDocFolder('支払調書')">📁</button>
+      </div>
+      <div class="fr" style="margin-top:10px;"><label class="fl">期末日</label><input type="date" id="doc-enddate" class="fi"></div>
+      <div style="font-size:11px;color:var(--sub);margin:-8px 0 8px 110px;">省略すると12/31。上半期なら6/30を入力</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="genWithholdingCert()">源泉徴収票 PDF</button>
+        <button class="btn btn-outline btn-sm" style="padding:0 12px;" onclick="openDocFolder('源泉徴収票')">📁</button>
+      </div>
+      <div id="docs-single-result" style="margin-top:8px;font-size:14px;"></div>
+    </div>
+  </div>
+
+  <!-- ── 月次 ────────────────────────────────── -->
+  <div id="docs-sub-monthly" style="display:none;">
+    <div class="card">
+      <div class="card-ttl">月次給料明細 一括生成</div>
+      <div class="fr"><label class="fl">対象月</label><input type="month" id="bulk-payslip-month" class="fi"></div>
+      <div style="display:flex;gap:8px;margin-bottom:0;">
+        <button class="btn btn-primary" style="flex:1;" onclick="genBulkPayslip()">📄 全スタッフ分を一括生成</button>
+        <button class="btn btn-outline btn-sm" style="padding:0 12px;" onclick="openDocFolder('賃金台帳')">📁</button>
+      </div>
+      <div id="bulk-payslip-result" style="margin-top:10px;font-size:14px;"></div>
+    </div>
+    <div class="card">
+      <div class="card-ttl">支払管理（未払い）</div>
+      <div id="docs-pay-list" style="margin-bottom:10px;"></div>
+      <button class="btn btn-outline btn-sm btn-w" style="margin-bottom:0;" onclick="loadDocsPayList()">↺ 未払い一覧を読込</button>
+    </div>
+    <div class="card">
+      <div class="card-ttl">会計サマリー（手数料）</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input type="month" id="fee-month" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:15px;">
+        <button class="btn btn-outline btn-sm" style="margin:0;" onclick="loadFeeSummary()">表示</button>
+      </div>
+      <div id="fee-summary"><div class="empty" style="font-size:13px;color:var(--sub);">月を選んで「表示」を押してください</div></div>
+    </div>
+    <div class="card">
+      <div class="card-ttl">応募追加</div>
+      <div class="fr"><label class="fl">スタッフ</label><select id="apply-staff" class="fi"></select></div>
+      <div class="fr"><label class="fl">日付</label><input type="date" id="apply-date" class="fi"></div>
+      <div class="fr"><label class="fl">職種</label><select id="apply-job" class="fi"></select></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline btn-sm" style="flex:1;" onclick="addApplyEntry('apply')">応募追加</button>
+        <button class="btn btn-primary btn-sm" style="flex:1;" onclick="addApplyEntry('approve')">確定として追加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 全体 ────────────────────────────────── -->
+  <div id="docs-sub-all" style="display:none;">
+    <div class="warn">⚠️ 支払調書・源泉徴収票は税理士への確認を推奨します</div>
+    <div class="card">
+      <div class="card-ttl">源泉徴収票 一括生成</div>
+      <div class="fr"><label class="fl">対象年</label><input type="number" id="bulk-withholding-year" class="fi" min="2024" max="2035" placeholder="2026"></div>
+      <div class="fr"><label class="fl">期末日</label><input type="date" id="bulk-withholding-enddate" class="fi"></div>
+      <div style="font-size:11px;color:var(--sub);margin:-8px 0 8px 110px;">省略すると12/31。上半期なら6/30を入力</div>
+      <div style="display:flex;gap:8px;margin-bottom:0;">
+        <button class="btn btn-primary" style="flex:1;" onclick="genBulkWithholdingCert()">📄 全スタッフ分を一括生成</button>
+        <button class="btn btn-outline btn-sm" style="padding:0 12px;" onclick="openDocFolder('源泉徴収票')">📁</button>
+      </div>
+      <div id="bulk-withholding-result" style="margin-top:10px;font-size:14px;"></div>
+    </div>
+    <div class="card">
+      <div class="card-ttl">納期の特例 — 源泉徴収集計</div>
+      <div style="font-size:12px;color:var(--sub);margin-bottom:10px;">上半期(1〜6月)→7/10納付 ／ 下半期(7〜12月)→翌1/20納付</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input type="number" id="withholding-half-year" class="fi" min="2024" max="2035" placeholder="2026" style="flex:1;padding:8px 10px;">
+        <select id="withholding-half" class="fi" style="flex:1;padding:8px 10px;">
+          <option value="1">上半期（1〜6月）</option>
+          <option value="2">下半期（7〜12月）</option>
+        </select>
+        <button class="btn btn-outline btn-sm" style="margin:0;" onclick="loadWithholdingHalf()">集計</button>
+      </div>
+      <div id="withholding-half-result"></div>
+    </div>
+    <div class="card">
+      <div class="card-ttl">一斉送信</div>
+      <div class="fr"><textarea id="broadcast-text" class="fi" rows="4" style="height:auto;" placeholder="全スタッフへのメッセージ..."></textarea></div>
+      <button class="btn btn-primary btn-w" style="margin-bottom:0;" onclick="sendBroadcast()">📢 全スタッフに送信</button>
+      <div id="broadcast-result" style="margin-top:8px;font-size:15px;"></div>
+    </div>
+    <div class="card">
+      <div class="card-ttl">データバックアップ</div>
+      <div style="font-size:13px;color:var(--sub);margin-bottom:10px;">全シートを別スプレッドシートに保存します。resetAndSetup誤爆時のリカバリ用。毎回新規作成されます（上書きなし）。</div>
+      <button class="btn btn-outline btn-sm btn-w" style="margin-bottom:0;" onclick="doBackup()">今すぐバックアップ</button>
+      <div id="backup-result" style="margin-top:8px;font-size:14px;"></div>
+    </div>
+    <div class="card">
+      <div class="card-ttl">チェックイン設定</div>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:15px;">
+        <input type="checkbox" id="qr-checkin-toggle" onchange="setQrCheckinEnabled(this.checked)" style="width:18px;height:18px;cursor:pointer;">
+        QRチェックイン機能を有効にする
+      </label>
+      <div id="qr-toggle-result" style="margin-top:8px;font-size:13px;color:var(--sub);"></div>
+    </div>
+  </div>
+
+</div>
+
+</main>
+
+<!-- 一括承認バー -->
+<div id="approve-bar">
+  <div id="approve-cnt">0件</div>
+  <button id="approve-clear" onclick="clearApproval()">解除</button>
+  <button id="approve-go" onclick="bulkApprove()">✓ 一括承認</button>
+</div>
+
+<!-- 一括支払いバー -->
+<div id="bulk-pay-bar">
+  <div id="bulk-pay-cnt">0件選択中</div>
+  <button id="bulk-pay-clear" onclick="clearBulkPay()">解除</button>
+  <button id="bulk-pay-go" onclick="doBulkPay()">💴 支払確定</button>
+</div>
+
+<!-- スタッフ詳細（右スライドイン） -->
+<div id="staff-modal">
+  <div id="sm-header">
+    <button id="sm-back" onclick="closeStaffModal()">←</button>
+    <div id="sm-name"></div>
+    <button id="sm-msg" onclick="openMsgFromDetail()">連絡する</button>
+  </div>
+  <div class="staff-tabs">
+    <button class="staff-tab on" onclick="switchStaffTab('wage',this)">賃金台帳</button>
+    <button class="staff-tab" onclick="switchStaffTab('eval',this)">評価</button>
+    <button class="staff-tab" onclick="switchStaffTab('schedule',this)">予定・実績</button>
+    <button class="staff-tab" onclick="switchStaffTab('chat',this)">会話</button>
+  </div>
+  <div id="sm-body"></div>
+</div>
+
+<!-- 職種別時給・交通費モーダル -->
+<div class="ov" id="modal-job-rate">
+  <div class="mo">
+    <div class="mot">💴 職種別 時給・交通費</div>
+    <select id="job-rate-select" class="fi" onchange="renderJobRates()" style="margin-bottom:12px;"></select>
+    <div id="job-rate-list"></div>
+    <div class="mo-actions">
+      <button class="mo-cancel" onclick="closeMo('modal-job-rate')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- スタッフ編集モーダル -->
+<div class="ov" id="modal-edit-staff">
+  <div class="mo">
+    <div class="mot">✏️ スタッフ情報を変更</div>
+    <input type="hidden" id="edit-staff-uid">
+    <div class="fr"><label class="fl">氏名</label><input type="text" id="edit-staff-name" class="fi" placeholder="例：田中 太郎"></div>
+    <div class="fr"><label class="fl">職種</label><div id="edit-staff-job-wrap" style="flex:1;"></div></div>
+    <div class="mo-actions">
+      <button class="mo-cancel" onclick="closeMo('modal-edit-staff')">キャンセル</button>
+      <button class="mo-ok" onclick="doEditStaff()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- LINE募集モーダル -->
+<div class="ov" id="modal-recruit">
+  <div class="mo">
+    <div class="mot">📢 LINE一括募集</div>
+    <div id="recruit-dates-info" style="font-size:15px;color:var(--sub);margin-bottom:14px;padding:8px 10px;background:var(--bg);border-radius:8px;"></div>
+    <div class="fr"><label class="fl">職種</label><select id="recruit-job" class="fi"></select></div>
+    <div class="mo-actions">
+      <button class="mo-cancel" onclick="closeMo('modal-recruit')">キャンセル</button>
+      <button class="mo-ok mo-ok-recruit" onclick="doSendRecruit()">募集送信</button>
+    </div>
+  </div>
+</div>
+
+<!-- 直接割当モーダル -->
+<div class="ov" id="modal-assign">
+  <div class="mo">
+    <div class="mot">＋ 直接割当</div>
+    <div id="assign-dates-info" style="font-size:15px;color:var(--sub);margin-bottom:14px;padding:8px 10px;background:var(--bg);border-radius:8px;"></div>
+    <div class="fr"><label class="fl">職種</label><select id="assign-job" class="fi" onchange="updateAssignStaff(this.value)"></select></div>
+    <div id="assign-job-info" style="display:none;background:var(--bg);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:14px;color:var(--sub);gap:16px;align-items:center;"></div>
+    <div style="margin:8px 0 4px;font-size:14px;color:var(--sub);">スタッフ選択</div>
+    <div id="assign-staff-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:220px;overflow-y:auto;margin-bottom:10px;"></div>
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:15px;cursor:pointer;">
+      <input type="checkbox" id="assign-notify" checked style="width:18px;height:18px;accent-color:var(--primary);cursor:pointer;">
+      <span>LINE確定メッセージを送る</span>
+    </label>
+    <div class="mo-actions">
+      <button class="mo-cancel" onclick="closeMo('modal-assign')">キャンセル</button>
+      <button class="mo-ok" onclick="doAssignDirect()">確定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 支払確認モーダル -->
+<div class="ov" id="modal-pay-confirm">
+  <div class="mo">
+    <div class="mot">支払確認</div>
+    <div id="pay-confirm-body" style="text-align:center;padding:8px 0 16px;"></div>
+    <div class="mo-actions">
+      <button class="mo-cancel" onclick="closeMo('modal-pay-confirm')">キャンセル</button>
+      <button class="mo-ok" style="background:var(--danger);" onclick="_doPayConfirm()">支払済みにする</button>
+    </div>
+  </div>
+</div>
+
+<!-- 日次詳細モーダル -->
+<div class="ov" id="modal-day">
+  <div class="mo">
+    <div class="mot" id="day-modal-ttl"></div>
+    <div id="day-modal-body"></div>
+    <div class="mo-actions" style="margin-top:12px;">
+      <button class="mo-cancel" onclick="closeMo('modal-day')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 連絡モーダル -->
+<div class="ov" id="modal-msg">
+  <div class="mo">
+    <div class="mot" id="modal-msg-ttl">連絡する</div>
+    <div id="modal-msg-body"></div>
+  </div>
+</div>
+
+<!-- 評価モーダル -->
+<div class="ov" id="modal-eval">
+  <div class="mo">
+    <div class="mot">評価入力</div>
+    <div id="modal-eval-body"></div>
+  </div>
+</div>
+
+<!-- WorkLog 修正モーダル -->
+<div class="ov" id="modal-wl-edit">
+  <div class="mo">
+    <div class="mot" id="wl-edit-ttl">勤務記録を修正</div>
+    <div id="wl-edit-body"></div>
+  </div>
+</div>
+
+<!-- WorkLog 手動追記モーダル -->
+<div class="ov" id="modal-wl-add">
+  <div class="mo">
+    <div class="mot">勤務記録を手動追記</div>
+    <div id="wl-add-body"></div>
+  </div>
+</div>
+
+<!-- Loader / Toast -->
+<div id="loader-overlay"><div class="lspin"></div><div class="ltxt">読み込み中...</div></div>
+<div id="toast"></div>
+
+<script>
+// ─── Security ────────────────────────────
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ─── Globals ─────────────────────────────
+var _shifts=[], _staff=[], _jobs=[];
+var _calY=new Date().getFullYear(), _calM=new Date().getMonth()+1;
+var _rFilter='all', _rJobFilter='';
+var _curStaff=null, _sdDetail=null, _sdTab='wage';
+var _pending=[];     // [{userId,date,jobId}] 承認待ち
+var _curEval=null;
+var _payEnabled=true;
+var _bulkPay=[];     // pay_id list
+var _selDates=[];    // selected dates on calendar
+
+// 日本の祝日リスト（2025-2026）
+var HOLIDAYS=new Set([
+  // 2025
+  '2025-01-01','2025-01-13','2025-02-11','2025-02-23','2025-02-24',
+  '2025-03-20','2025-04-29','2025-05-03','2025-05-04','2025-05-05',
+  '2025-05-06','2025-07-21','2025-08-11','2025-09-15','2025-09-22',
+  '2025-09-23','2025-10-13','2025-11-03','2025-11-23','2025-11-24',
+  // 2026
+  '2026-01-01','2026-01-12','2026-02-11','2026-02-23',
+  '2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05',
+  '2026-05-06','2026-07-20','2026-08-11','2026-09-21','2026-09-22',
+  '2026-09-23','2026-10-12','2026-11-03','2026-11-23'
+]);
+var _assignSelUid=''; // 直接割当で選択中のスタッフID
+var _payConfirmCb=null; // 支払確認モーダルのコールバック
+
+// ─── Init ────────────────────────────────
+window.onload=function(){
+  var _now=new Date();
+  var _y=_now.getFullYear();
+  var _ym=_y+'-'+pad(_now.getMonth()+1);
+  document.getElementById('doc-month').value=_ym;
+  document.getElementById('bulk-payslip-month').value=_ym;
+  document.getElementById('fee-month').value=_ym;
+  document.getElementById('doc-year').value=_y;
+  document.getElementById('bulk-withholding-year').value=_y;
+  loadAll();
+};
+
+function pad(n){return String(n).padStart(2,'0');}
+function _fmt(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function today(){return _fmt(new Date());}
+
+// 職種マスタから予定日当を計算（start_time / end_time ベース、なければ8h）
+function _calcEstWage(j){
+  var hourly=Number(j.hourly_wage||j.wage||0);
+  var hours=8;
+  if(j.start_time&&j.end_time){
+    var s=String(j.start_time).split(':');
+    var e=String(j.end_time).split(':');
+    var diff=((parseInt(e[0],10)*60+parseInt(e[1],10))-(parseInt(s[0],10)*60+parseInt(s[1],10)))/60;
+    if(diff>0)hours=diff;
+  }
+  return Math.round(hourly*hours)+Number(j.transport||0);
+}
+
+// ─── Load All ────────────────────────────
+function loadAll(){
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var d=JSON.parse(j);
+      _shifts=(d.applied||[]).map(function(r){r.date=String(r.date||'').slice(0,10);return r;});
+      _staff=d.staff||[];
+      _jobs=d.jobs||[];
+      renderCalendar();
+      renderRoster();_initJobRateSelect();_initJobFilterSel();populateDocUser();updateUnpaidBadge();
+      showLoader(false);
+    })
+    .withFailureHandler(function(e){toast('読み込み失敗: '+(e&&e.message||''));showLoader(false);})
+    .api_loadAll();
+}
+
+function updateUnpaidBadge(){
+  var cnt=(_staff||[]).reduce(function(s,x){return s+(Number(x.unpaid_count)||0);},0);
+  var el=document.getElementById('tnav-roster');
+  var ex=el.querySelector('.tnav-bdg');if(ex)ex.remove();
+  if(cnt>0){
+    var b=document.createElement('span');b.className='tnav-bdg';b.textContent=cnt;el.appendChild(b);
+  }
+}
+
+// ─── Utilities ───────────────────────────
+function showLoader(on){document.getElementById('loader-overlay').classList[on?'add':'remove']('on');}
+function toast(msg){
+  var el=document.getElementById('toast');
+  el.textContent=msg;el.style.display='block';
+  clearTimeout(el._t);el._t=setTimeout(function(){el.style.display='none';},3000);
+}
+function showPage(name,el){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tnav-btn').forEach(function(b){b.classList.remove('on');});
+  document.getElementById('page-'+name).classList.add('active');
+  el.classList.add('on');
+  var isShift=name==='shift';
+  document.getElementById('toolbar').style.display=isShift?'flex':'none';
+  var main=document.getElementById('main');
+  main.className=isShift?'with-toolbar':'no-toolbar';
+  if(name==='docs'){showDocsSub('kojin',document.getElementById('dstab-kojin'));}
+}
+function openMo(id){document.getElementById(id).classList.add('on');}
+function closeMo(id){document.getElementById(id).classList.remove('on');}
+
+// ─── Calendar ────────────────────────────
+function prevMonth(){if(--_calM<1){_calM=12;_calY--;}renderCalendar();}
+function nextMonth(){if(++_calM>12){_calM=1;_calY++;}renderCalendar();}
+function clearSelDates(){_selDates=[];renderCalendar();updateSelBar();}
+function updateSelBar(){
+  var bar=document.getElementById('sel-bar');
+  var main=document.getElementById('main');
+  if(!bar)return;
+  if(!_selDates.length){
+    bar.style.display='none';
+    if(main)main.style.marginTop='';
+    return;
+  }
+  var sorted=_selDates.slice().sort();
+  var groups={};
+  sorted.forEach(function(d){var m=d.slice(0,7);if(!groups[m])groups[m]=[];groups[m].push(Number(d.slice(8)));});
+  var labels=Object.keys(groups).sort().map(function(m){
+    var parts=m.split('-');return Number(parts[1])+'月 '+groups[m].join('・')+'日';
+  }).join('　/　');
+  bar.style.display='flex';
+  document.getElementById('sel-bar-label').textContent=sorted.length+'日選択中：'+labels;
+  // mainのmarginを動的に調整
+  if(main){
+    var h=bar.offsetHeight;
+    main.style.marginTop='calc(var(--hh) + var(--nh) + var(--th) + '+h+'px)';
+  }
+}
+
+function toggleDateSel(ds,e){
+  if(e)e.stopPropagation();
+  var i=_selDates.indexOf(ds);
+  if(i>=0)_selDates.splice(i,1);else _selDates.push(ds);
+  var cell=document.querySelector('.cal-cell[data-date="'+ds+'"]');
+  if(cell)cell.classList.toggle('selected',_selDates.indexOf(ds)>=0);
+  updateSelBar();
+}
+
+function renderCalendar(){
+  var td=today();
+  document.getElementById('cal-title').textContent=_calY+'年'+_calM+'月';
+
+  // latest event per (userId:date:jobId)
+  var latestMap={};
+  _shifts.forEach(function(r){
+    var key=(r.user_id||'')+':'+String(r.date||'').slice(0,10)+':'+(r.job_id||'');
+    var ex=latestMap[key];
+    if(!ex||String(r.timestamp||'')>String(ex.timestamp||''))latestMap[key]=r;
+  });
+  var byDate={};
+  Object.keys(latestMap).forEach(function(k){
+    var r=latestMap[k];
+    // approved後キャンセルは表示、applied→キャンセルは非表示
+    if(r.event==='cancelled'&&r.prev_event!=='approved')return;
+    var d=String(r.date||'').slice(0,10);
+    if(!byDate[d])byDate[d]=[];
+    byDate[d].push(r);
+  });
+
+  var first=new Date(_calY,_calM-1,1);
+  var lastDay=new Date(_calY,_calM,0).getDate();
+  var startDow=first.getDay();
+  var html='';
+  for(var i=0;i<startDow;i++)html+='<div></div>';
+
+  for(var day=1;day<=lastDay;day++){
+    var ds=_calY+'-'+pad(_calM)+'-'+pad(day);
+    var dow=new Date(ds+'T00:00:00').getDay();
+    var isHoliday=HOLIDAYS.has(ds);
+    var isToday=ds===td, isPast=ds<td, isSun=dow===0||isHoliday, isSat=dow===6&&!isHoliday;
+    var isSel=_selDates.indexOf(ds)>=0;
+    var dayRows=byDate[ds]||[];
+
+    var hasApproved=dayRows.some(function(r){return r.event==='approved';});
+    var hasWait=!isPast&&!isToday&&dayRows.some(function(r){return r.event==='applied';});
+    var hasUnpaid=isPast&&dayRows.some(function(r){return r.paid===false;});
+
+    var cc='cal-cell';
+    if(isSel)cc+=' selected';
+    if(isToday)cc+=' today';
+    else if(hasUnpaid)cc+=' unpaid';
+    else if(hasWait)cc+=' wait';
+    else if(hasApproved&&!isPast)cc+=' future';
+    if(isSun)cc+=' cal-sun';
+    if(isSat)cc+=' cal-sat';
+
+    var detailBtn=dayRows.length
+      ?'<button style="background:none;border:none;color:var(--sub);font-size:16px;padding:0;cursor:pointer;line-height:1;min-width:28px;min-height:28px;display:flex;align-items:center;justify-content:center;border-radius:4px;" onclick="event.stopPropagation();openDayDetail(\''+ds+'\')" title="詳細">≡</button>'
+      :'';
+    var dateHtml='<div style="display:flex;align-items:center;justify-content:space-between;min-height:22px;">'
+      +(isToday?'<span class="today-circle">'+day+'</span>':'<div class="cal-date">'+day+'</div>')
+      +detailBtn+'</div>';
+
+    // chips (max 4)
+    var chips='',shown=0;
+    dayRows.forEach(function(r){
+      if(shown>=4)return;
+      var j=(_jobs||[]).find(function(x){return x.job_id===r.job_id;})||{};
+      var name=(r.name||r.display_name||r.user_id||'').slice(0,6);
+      var jt=(j.title||'');
+      var cls,content;
+      var ns='<span class="s-chip-name" onclick="event.stopPropagation();openStaffModal(\''+r.user_id+'\')">'+escapeHtml(name)+'</span>';
+      var chipClick='';
+
+      if(!isPast&&!isToday&&r.event==='applied'){
+        // 未来の承認待ち（タップで承認選択、×で削除）
+        var inP=_pending.some(function(p){return p.userId===r.user_id&&p.date===ds&&p.jobId===r.job_id;});
+        cls='chip-wait'+(inP?' chip-sel':'');
+        chipClick='onclick="event.stopPropagation();toggleApprovalChip(\''+r.user_id+'\',\''+ds+'\',\''+r.job_id+'\')"';
+        var delBtn='<span onclick="event.stopPropagation();cancelApplied(\''+r.user_id+'\',\''+ds+'\',\''+r.job_id+'\')" '
+          +'style="margin-left:auto;font-size:13px;font-weight:700;color:var(--danger);padding:1px 4px;border-radius:4px;cursor:pointer;flex-shrink:0;">×</span>';
+        content='<div class="s-chip-row">'
+          +'<span style="width:14px;height:14px;border-radius:50%;background:'+(inP?'var(--primary)':'rgba(0,0,0,.15)')+';display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#fff;flex-shrink:0;margin-right:2px;">'+(inP?'✓':'')+'</span>'
+          +ns+'<span class="s-chip-tag">承認待</span>'+delBtn+'</div>'
+          +(jt?'<span style="font-size:12px;">'+escapeHtml(jt)+'</span>':'');
+
+      } else if((isPast||isToday)&&r.event==='applied'){
+        if(r.paid!==true){return;} // 未払いの承認漏れはスキップ
+        // 承認後に再応募で applied に戻ったが支払済みの場合は「済」表示
+        var net4=Number(r.net_pay||0);
+        cls='chip-past';
+        content='<div class="s-chip-row">'+ns
+          +(jt?'<span style="font-size:11px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;">'+escapeHtml(jt)+'</span>':'')
+          +'<span class="s-chip-tag">済</span></div>'
+          +(net4?'<span style="font-size:12px;color:var(--sub);">¥'+net4.toLocaleString()+'</span>':'');
+
+      } else if(!isPast&&!isToday&&r.event==='approved'){
+        // 未来の確定
+        cls='chip-future';
+        content='<div class="s-chip-row">'+ns+'<span class="s-chip-tag">予定</span></div>'
+          +(jt?'<span style="font-size:12px;">'+escapeHtml(jt)+'</span>':'');
+
+      } else if(r.event==='approved'){
+        // 今日 or 過去の確定 → paid状態で分岐
+        if(r.paid===true){
+          var net3=Number(r.net_pay||0);
+          cls='chip-past';
+          content='<div class="s-chip-row">'+ns
+            +(jt?'<span style="font-size:11px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;">'+escapeHtml(jt)+'</span>':'')
+            +'<span class="s-chip-tag">済</span></div>'
+            +(net3?'<span style="font-size:12px;color:var(--sub);">¥'+net3.toLocaleString()+'</span>':'');
+        } else if(r.paid===false){
+          var net=Number(r.net_pay)||0;
+          cls='chip-unpaid';
+          content='<div class="s-chip-row">'+ns
+            +(isToday?'<span class="s-chip-tag">本日</span>':'<span class="s-chip-tag">未払</span>')
+            +'</div>'
+            +(r.pay_id&&_payEnabled
+              ?'<button class="chip-pay-btn" style="background:var(--danger);color:#fff;" '
+                +'onclick="event.stopPropagation();showPayConfirm(\''+r.pay_id+'\','+net+',\''+escapeHtml(name)+' '+ds+'\')">¥'+net.toLocaleString()+'</button>'
+              :(net?'<span style="font-size:12px;">¥'+net.toLocaleString()+'</span>':'')
+            );
+        } else {
+          // paid===null: PayRecord未作成（チェックアウト未記録）
+          cls='chip-unpaid';
+          var hw=_calcEstWage(j);
+          var delBtnU='<span onclick="event.stopPropagation();cancelApplied(\''+r.user_id+'\',\''+ds+'\',\''+r.job_id+'\')" '
+            +'style="margin-left:auto;font-size:13px;font-weight:700;color:var(--danger);padding:1px 4px;cursor:pointer;flex-shrink:0;">×</span>';
+          content='<div class="s-chip-row">'+ns+'<span class="s-chip-tag">未精算</span>'+delBtnU+'</div>'
+            +(_payEnabled
+              ?'<button class="chip-pay-btn" style="background:var(--accent);color:#fff;" '
+                +'onclick="event.stopPropagation();showApprovePayConfirm(\''+r.user_id+'\',\''+ds+'\',\''+r.job_id+'\','+hw+')">精算</button>'
+              :'');
+        }
+
+      } else if(r.event==='cancelled'){
+        cls='chip-cancel';
+        content='<div class="s-chip-row">'+ns
+          +(jt?'<span style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;">'+escapeHtml(jt)+'</span>':'')
+          +'<span class="s-chip-tag">キャンセル</span></div>';
+      } else {
+        cls='chip-past';
+        var elseNet=Number(r.net_pay||0);
+        content='<div class="s-chip-row">'+ns
+          +(jt?'<span style="font-size:11px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;">'+escapeHtml(jt)+'</span>':'')
+          +'<span class="s-chip-tag">'+(r.paid===true?'済':'履歴')+'</span></div>'
+          +(elseNet?'<span style="font-size:12px;color:var(--sub);">¥'+elseNet.toLocaleString()+'</span>':'');
+      }
+      chips+='<div class="s-chip '+cls+'" '+chipClick+'>'+content+'</div>';
+      shown++;
+    });
+    if(dayRows.length>4)chips+='<div style="font-size:12px;color:var(--sub);padding:2px 3px;">他'+(dayRows.length-4)+'名</div>';
+
+    html+='<div class="'+cc+'" data-date="'+ds+'" onclick="toggleDateSel(\''+ds+'\',event)">'
+      +dateHtml+chips+'</div>';
+  }
+  document.getElementById('cal-grid').innerHTML=html;
+
+  // 未払いバー
+  var prefix=_calY+'-'+pad(_calM);
+  var mu=_shifts.filter(function(r){
+    return String(r.date||'').slice(0,7)===prefix&&r.event==='approved'&&r.paid===false;
+  });
+  var bar=document.getElementById('cal-unpaid-bar');
+  if(mu.length){
+    var tot=mu.reduce(function(s,r){return s+(Number(r.net_pay)||0);},0);
+    bar.style.display='block';
+    bar.textContent='⚠ 未払い '+mu.length+'件　¥'+tot.toLocaleString();
+  } else {
+    bar.style.display='none';
+  }
+  updateHdTotal();
+}
+
+function updateHdTotal(){
+  var prefix=_calY+'-'+pad(_calM);
+  var rows=_shifts.filter(function(r){
+    return String(r.date||'').slice(0,7)===prefix&&r.event==='approved';
+  });
+  var total=rows.reduce(function(s,r){return s+(Number(r.net_pay)||0);},0);
+  var el=document.getElementById('hd-total');
+  if(el) el.textContent=total>0?'¥'+total.toLocaleString():'';
+}
+
+// ─── Recruit ─────────────────────────────
+function openRecruit(){
+  if(!_selDates.length){toast('日付を選択してください（カレンダーをタップ）');return;}
+  var sorted=_selDates.slice().sort();
+  document.getElementById('recruit-dates-info').textContent='対象日: '+sorted.join(' / ');
+  document.getElementById('recruit-job').innerHTML=(_jobs||[]).map(function(j){
+    return'<option value="'+j.job_id+'">'+escapeHtml(j.title||'')+'</option>';
+  }).join('');
+  openMo('modal-recruit');
+}
+
+function doSendRecruit(){
+  var jobId=document.getElementById('recruit-job').value;
+  if(!jobId){toast('職種を選択してください');return;}
+  showLoader(true);closeMo('modal-recruit');
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);
+      if(r.ok){toast('✅ 募集を送信しました（'+r.count+'名）');_selDates=[];updateSelBar();renderCalendar();}
+      else toast('❌ '+(r.msg||'エラー'));
+      showLoader(false);
+    })
+    .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+    .api_sendRecruitMessage(JSON.stringify(_selDates.slice().sort()), jobId);
+}
+
+// ─── Assign Direct ───────────────────────
+function openAssign(){
+  if(!_selDates.length){toast('日付を選択してください（カレンダーをタップ）');return;}
+  var sorted=_selDates.slice().sort();
+  document.getElementById('assign-dates-info').textContent='対象日: '+sorted.join(' / ');
+  var firstJobId='';
+  document.getElementById('assign-job').innerHTML=(_jobs||[]).map(function(j,i){
+    if(i===0)firstJobId=j.job_id;
+    return'<option value="'+j.job_id+'">'+escapeHtml(j.title||'')+'</option>';
+  }).join('');
+  updateAssignStaff(firstJobId);
+  openMo('modal-assign');
+}
+
+function updateAssignStaff(jobId){
+  _assignSelUid='';
+  // 職種情報表示
+  var info=document.getElementById('assign-job-info');
+  if(info){
+    var j=(_jobs||[]).find(function(x){return x.job_id===jobId;})||{};
+    var wage=Number(j.hourly_wage||j.wage||0);
+    var st=j.start_time||'';
+    var et=j.end_time||'';
+    var trans=Number(j.transport||0);
+    var parts=[];
+    if(wage)parts.push('<span>時給 <strong style="color:var(--primary-dk);">¥'+wage.toLocaleString()+'</strong></span>');
+    if(st&&et)parts.push('<span>勤務 <strong style="color:var(--primary-dk);">'+escapeHtml(st)+'〜'+escapeHtml(et)+'</strong></span>');
+    if(trans)parts.push('<span>交通費 <strong style="color:var(--primary-dk);">¥'+trans.toLocaleString()+'</strong></span>');
+    info.innerHTML=parts.join('<span style="color:#ccc;">｜</span>');
+    info.style.display=parts.length?'flex':'none';
+  }
+  // 選択中の職種オブジェクト・予定額
+  var jObj=(_jobs||[]).find(function(x){return x.job_id===jobId;})||{};
+  var estPay=_calcEstWage(jObj);
+  // この職種の承認済み勤務回数マップ（user_id → count）
+  var jobCountMap={};
+  (_shifts||[]).forEach(function(r){
+    if(r.job_id===jobId&&r.event==='approved'){
+      jobCountMap[r.user_id]=(jobCountMap[r.user_id]||0)+1;
+    }
+  });
+  var list=(_staff||[]);
+
+  // 実績あり（count>0）を先に、count降順でソート
+  var withExp=list.filter(function(s){return (jobCountMap[s.line_user_id]||0)>0;})
+    .sort(function(a,b){return (jobCountMap[b.line_user_id]||0)-(jobCountMap[a.line_user_id]||0);});
+  var withoutExp=list.filter(function(s){return !(jobCountMap[s.line_user_id]||0);});
+
+  var grid=document.getElementById('assign-staff-grid');
+  if(!grid)return;
+
+  function cardHtml(s){
+    var uid=s.line_user_id;
+    var nm=(s.name||s.display_name||uid||'').slice(0,8);
+    var av=nm.slice(0,1);
+    var cnt=jobCountMap[uid]||0;
+    return'<div class="staff-card" id="sc-'+uid+'" onclick="selectAssignStaff(\''+uid+'\',this)">'
+      +'<div class="staff-card-av">'+escapeHtml(av)+'</div>'
+      +'<div style="font-size:14px;">'+escapeHtml(nm)+'</div>'
+      +(estPay?'<div style="font-size:12px;color:var(--primary-dk);font-weight:700;">¥'+estPay.toLocaleString()+'</div>':'')
+      +'<div style="font-size:11px;color:var(--sub);">'+(cnt?cnt+'回':'初')+'</div>'
+      +'</div>';
+  }
+
+  var html='';
+  if(withExp.length){
+    html+=withExp.map(cardHtml).join('');
+    if(withoutExp.length){
+      // 区切り（全列幅スパン）
+      html+='<div style="grid-column:1/-1;font-size:13px;color:var(--sub);padding:4px 2px;border-top:1px solid var(--line);margin-top:4px;">その他</div>';
+      html+=withoutExp.map(cardHtml).join('');
+    }
+  } else {
+    html+=list.map(cardHtml).join('');
+  }
+  grid.innerHTML=html;
+
+  // 1件なら自動選択
+  var autoList=withExp.length?withExp:list;
+  if(autoList.length===1){
+    _assignSelUid=autoList[0].line_user_id;
+    var c=document.getElementById('sc-'+_assignSelUid);
+    if(c)c.classList.add('sel');
+  }
+}
+
+function selectAssignStaff(uid, el){
+  _assignSelUid=uid;
+  var grid=document.getElementById('assign-staff-grid');
+  if(grid)grid.querySelectorAll('.staff-card').forEach(function(c){c.classList.remove('sel');});
+  if(el)el.classList.add('sel');
+}
+
+function doAssignDirect(){
+  var userId=_assignSelUid;
+  var jobId=document.getElementById('assign-job').value;
+  var dates=_selDates.slice().sort();
+  var notify=document.getElementById('assign-notify').checked;
+  if(!userId){toast('スタッフを選択してください');return;}
+  if(!jobId||!dates.length){toast('必須項目が不足しています');return;}
+  showLoader(true);closeMo('modal-assign');
+  var done=0,ok=0;
+  dates.forEach(function(date){
+    google.script.run
+      .withSuccessHandler(function(j){
+        var r=JSON.parse(j);if(r.ok)ok++;
+        if(++done>=dates.length){
+          toast('✅ '+ok+'/'+dates.length+'件割当しました'+(notify?'（LINE通知済）':'（通知なし）'));
+          _selDates=[];updateSelBar();_refreshShiftsOnly();
+        }
+      })
+      .withFailureHandler(function(){
+        if(++done>=dates.length){toast('⚠ 一部失敗（'+ok+'/'+dates.length+'件）');showLoader(false);}
+      })
+      .api_addShiftDirect(userId,date,jobId,notify);
+  });
+}
+
+// ─── Approval ────────────────────────────
+// スタッフのデフォルトjob_idと異なる場合に確認ダイアログ（キャンセルでtrueを返す）
+function _confirmJobMismatch_(uid,jid){
+  var s=(_staff||[]).find(function(x){return x.line_user_id===uid;})||{};
+  var defaultJob=(s.job_id||'').split(',')[0].trim();
+  if(!defaultJob||defaultJob===jid)return false;
+  var name=s.name||s.display_name||uid;
+  return !confirm(name+'のデフォルト職種は「'+defaultJob+'」です。\n「'+jid+'」で承認しますか？');
+}
+function toggleApproval(uid,date,jid,cb){
+  if(cb.checked){
+    if(!_pending.some(function(p){return p.userId===uid&&p.date===date&&p.jobId===jid;}))
+      _pending.push({userId:uid,date:date,jobId:jid});
+  }else{
+    _pending=_pending.filter(function(p){return!(p.userId===uid&&p.date===date&&p.jobId===jid);});
+  }
+  updateApproveBar();
+}
+function updateApproveBar(){
+  var bar=document.getElementById('approve-bar');
+  bar.classList[_pending.length?'add':'remove']('on');
+  document.getElementById('approve-cnt').textContent=_pending.length+'件選択中';
+}
+function clearApproval(){_pending=[];updateApproveBar();renderCalendar();}
+function toggleApprovalChip(uid,date,jid){
+  var already=_pending.some(function(p){return p.userId===uid&&p.date===date&&p.jobId===jid;});
+  if(already){_pending=_pending.filter(function(p){return!(p.userId===uid&&p.date===date&&p.jobId===jid);});}
+  else{
+    if(_confirmJobMismatch_(uid,jid))return;
+    _pending.push({userId:uid,date:date,jobId:jid});
+  }
+  updateApproveBar();renderCalendar();
+}
+function bulkApprove(){
+  if(!_pending.length)return;
+  if(!confirm(_pending.length+'件を一括承認しますか？'))return;
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);
+      toast('✅ '+r.approved+'件を確定しました');
+      _pending=[];updateApproveBar();_refreshShiftsOnly();
+    })
+    .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+    .api_approveShifts(JSON.stringify(_pending));
+}
+
+// ─── Quick Actions ────────────────────────
+function _openPayConfirm(label, amount, color, cb){
+  if(!_payEnabled){toast('🔒 支払処理はロック中です');return;}
+  var body=document.getElementById('pay-confirm-body');
+  body.innerHTML='<div style="font-size:15px;color:var(--sub);margin-bottom:6px;">'+escapeHtml(label)+'</div>'
+    +'<div style="font-size:30px;font-weight:800;color:'+color+';">¥'+(Number(amount)||0).toLocaleString()+'</div>'
+    +'<div style="font-size:14px;color:var(--sub);margin-top:4px;">を支払済みにします</div>';
+  _payConfirmCb=cb;
+  openMo('modal-pay-confirm');
+}
+
+function showPayConfirm(payId, netPay, label){
+  _openPayConfirm(label||'', netPay, 'var(--danger)', function(){
+    showLoader(true);closeMo('modal-pay-confirm');
+    google.script.run
+      .withSuccessHandler(function(j){
+        var r=JSON.parse(j);
+        if(r.ok){toast('✅ 支払済みに更新しました');_afterPayRefresh();}
+        else{toast('❌ '+(r.msg||'エラー'));showLoader(false);}
+      })
+      .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+      .api_markAsPaid(payId);
+  });
+}
+
+function showApprovePayConfirm(userId,date,jobId,wage){
+  _openPayConfirm(date+'の勤務記録を作成して', wage, 'var(--accent)', function(){
+    showLoader(true);closeMo('modal-pay-confirm');
+    google.script.run
+      .withSuccessHandler(function(j){
+        var r=JSON.parse(j);
+        if(r.ok){toast('✅ 完了・支払済みにしました');_afterPayRefresh();}
+        else{toast('❌ '+(r.msg||'エラー'));showLoader(false);}
+      })
+      .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+      .api_approveAndPay(userId,date,jobId);
+  });
+}
+
+function _doPayConfirm(){
+  if(_payConfirmCb)_payConfirmCb();
+}
+
+function showDocsSub(name,btn){
+  ['kojin','monthly','all'].forEach(function(n){
+    document.getElementById('docs-sub-'+n).style.display=n===name?'':'none';
+    document.getElementById('dstab-'+n).classList.toggle('on',n===name);
+  });
+  if(name==='monthly')loadDocsPayList();
+  if(name==='all')loadQrCheckinSetting();
+}
+function jumpToDocsUnpaid(){
+  var el=document.getElementById('tnav-docs');
+  showPage('docs',el);
+  showDocsSub('monthly',document.getElementById('dstab-monthly'));
+}
+
+// ─── Day Detail ───────────────────────────
+function openDayDetail(ds){
+  var title=document.getElementById('day-modal-ttl');
+  var body=document.getElementById('day-modal-body');
+  title.textContent=ds.replace(/-/g,'/')+' のシフト';
+  var td=today();
+  var isPast=ds<td, isToday=ds===td;
+
+  // latestMap から当日のrowを取得
+  var latestMap={};
+  _shifts.forEach(function(r){
+    var key=(r.user_id||'')+':'+String(r.date||'').slice(0,10)+':'+(r.job_id||'');
+    var ex=latestMap[key];
+    if(!ex||String(r.timestamp||'')>String(ex.timestamp||''))latestMap[key]=r;
+  });
+  var rows=Object.values(latestMap).filter(function(r){
+    var d=String(r.date||'').slice(0,10);
+    if(d!==ds)return false;
+    if(r.event==='cancelled'&&r.prev_event!=='approved')return false;
+    return true;
+  });
+
+  if(!rows.length){body.innerHTML='<p style="color:var(--sub);text-align:center;padding:16px;">シフトなし</p>';openMo('modal-day');return;}
+
+  body.innerHTML=rows.map(function(r){
+    var j=(_jobs||[]).find(function(x){return x.job_id===r.job_id;})||{};
+    var nm=(r.name||r.display_name||r.user_id||'');
+    var jt=j.title||'';
+    var net=Number(r.net_pay)||0;
+    var statusHtml='';
+    if(r.event==='approved'){
+      if(r.paid===true){
+        statusHtml='<span style="color:var(--sub);font-size:14px;">支払済</span>';
+      } else if(r.paid===false){
+        var lbl=nm+' '+ds+' 支払';
+        statusHtml='<button class="chip-pay-btn" style="background:var(--danger);color:#fff;" '
+          +'onclick="showPayConfirm(\''+r.pay_id+'\','+net+',\''+escapeHtml(lbl)+'\')">¥'+net.toLocaleString()+' 支払</button>';
+      } else {
+        var hw=_calcEstWage(j);
+        statusHtml='<button class="chip-pay-btn" style="background:var(--accent);color:#fff;" '
+          +'onclick="showApprovePayConfirm(\''+r.user_id+'\',\''+ds+'\',\''+r.job_id+'\','+hw+')">精算</button>';
+      }
+    } else if(r.event==='applied'&&(isPast||isToday)){
+      statusHtml='<span style="color:var(--sub);font-size:14px;margin-right:4px;">未処理</span>'
+        +'<button class="chip-pay-btn" style="background:var(--danger);color:#fff;" '
+        +'onclick="cancelApplied(\''+r.user_id+'\',\''+ds+'\',\''+r.job_id+'\')">削除</button>';
+    } else if(r.event==='applied'){
+      statusHtml='<button class="chip-pay-btn" style="background:var(--primary);color:#fff;" '
+        +'onclick="toggleApprovalFromDetail(\''+r.user_id+'\',\''+ds+'\',\''+r.job_id+'\')">承認</button>';
+    } else if(r.event==='cancelled'){
+      statusHtml='<span style="color:#aaa;font-size:14px;">キャンセル</span>';
+    }
+    return'<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line);">'
+      +'<div style="flex:1;">'
+      +'<div style="font-weight:700;font-size:16px;" onclick="openStaffModal(\''+r.user_id+'\')" >'+escapeHtml(nm)+'</div>'
+      +'<div style="font-size:14px;color:var(--sub);">'+escapeHtml(jt)+'</div>'
+      +'</div>'
+      +statusHtml
+      +'</div>';
+  }).join('');
+  openMo('modal-day');
+}
+
+function toggleApprovalFromDetail(uid,date,jid){
+  var already=_pending.some(function(p){return p.userId===uid&&p.date===date&&p.jobId===jid;});
+  if(!already){
+    if(_confirmJobMismatch_(uid,jid))return;
+    _pending.push({userId:uid,date:date,jobId:jid});
+    updateApproveBar();
+    toast('承認リストに追加しました');
+    closeMo('modal-day');
+    renderCalendar();
+  }
+}
+
+// ─── Bulk Pay ─────────────────────────────
+function updateBulkPayBar(){
+  var bar=document.getElementById('bulk-pay-bar');
+  bar.classList[_bulkPay.length?'add':'remove']('on');
+  document.getElementById('bulk-pay-cnt').textContent=_bulkPay.length+'件選択中';
+}
+function clearBulkPay(){
+  _bulkPay=[];
+  document.querySelectorAll('.pay-cb').forEach(function(cb){cb.checked=false;});
+  updateBulkPayBar();
+}
+function doBulkPay(){
+  if(!_bulkPay.length)return;
+  if(!_payEnabled){toast('🔒 支払処理はロック中です');return;}
+  if(!confirm(_bulkPay.length+'件を支払済みにしますか？'))return;
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);
+      toast('✅ '+r.count+'件を支払済みにしました');
+      _bulkPay=[];updateBulkPayBar();_afterPayRefresh();
+    })
+    .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+    .api_markAsPaidBulk(JSON.stringify(_bulkPay));
+}
+
+function _refreshShifts(){
+  google.script.run
+    .withSuccessHandler(function(j){
+      var d=JSON.parse(j);
+      var staffById={};(_staff||[]).forEach(function(s){staffById[s.line_user_id]=s;});
+      _shifts=(d.applied||[]).map(function(r){
+        var s=staffById[r.user_id]||{};
+        r.date=String(r.date||'').slice(0,10);
+        if(!r.name)r.name=s.name||'';
+        if(!r.display_name)r.display_name=s.display_name||'';
+        return r;
+      });
+      _jobs=d.jobs||[];
+      renderCalendar();showLoader(false);
+    })
+    .withFailureHandler(function(e){toast('❌ '+(e&&e.message||''));showLoader(false);})
+    .api_loadShifts();
+}
+function _afterPayRefresh(){_refreshShiftsOnly();_refreshStaffOnly();}
+
+// シフト軽量リフレッシュ（Staff更新なし・name/display_nameは既存_staffからマージ）
+function _refreshShiftsOnly(){
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var d=JSON.parse(j);
+      var staffById={};
+      (_staff||[]).forEach(function(s){staffById[s.line_user_id]=s;});
+      _shifts=(d.applied||[]).map(function(r){
+        var s=staffById[r.user_id]||{};
+        r.date=String(r.date||'').slice(0,10);
+        if(!r.name)r.name=s.name||'';
+        if(!r.display_name)r.display_name=s.display_name||'';
+        return r;
+      });
+      _jobs=d.jobs||[];
+      renderCalendar();
+      showLoader(false);
+    })
+    .withFailureHandler(function(e){toast('❌ '+(e&&e.message||''));showLoader(false);})
+    .api_loadShifts();
+}
+
+// スタッフ情報軽量リフレッシュ（シフト更新なし・バックグラウンド実行）
+function _refreshStaffOnly(){
+  google.script.run
+    .withSuccessHandler(function(j){
+      var d=JSON.parse(j);
+      _staff=d.staff||[];
+      renderRoster();_initJobFilterSel();
+      updateUnpaidBadge();
+    })
+    .withFailureHandler(function(e){console.error('staff refresh failed: '+(e&&e.message||''));})
+    .api_loadStaffSummary();
+}
+
+// ─── Roster ──────────────────────────────
+function filterRoster(f,el){
+  _rFilter=f;
+  document.querySelectorAll('.rf-btn').forEach(function(b){b.classList.remove('on');});
+  el.classList.add('on');renderRoster();
+}
+function renderRoster(){
+  var q=((document.getElementById('roster-search')||{}).value||'').trim().toLowerCase();
+  var list=_staff.slice();
+  if(q)list=list.filter(function(s){
+    return (s.name||s.display_name||s.line_user_id||'').toLowerCase().indexOf(q)>=0;
+  });
+  if(_rFilter==='named')   list=list.filter(function(s){return s.name;});
+  if(_rFilter==='noname')  list=list.filter(function(s){return !s.name;});
+  if(_rFilter==='unpaid')  list=list.filter(function(s){return Number(s.unpaid_count)>0;});
+  if(_rFilter==='caution') list=list.filter(function(s){return s.caution_flag===true||s.caution_flag==='true';});
+  if(_rJobFilter) list=list.filter(function(s){return (s.job_id||'').split(',').map(function(j){return j.trim();}).indexOf(_rJobFilter)>=0;});
+  list.sort(function(a,b){
+    var au=Number(a.unpaid_count)||0,bu=Number(b.unpaid_count)||0;
+    if(au!==bu)return bu-au;
+    return (b.last_date||'')>(a.last_date||'')?1:-1;
+  });
+  var el=document.getElementById('roster-list');
+  if(!list.length){el.innerHTML='<div class="empty">該当なし</div>';return;}
+  el.innerHTML=list.map(function(s){
+    var name=s.name||s.display_name||s.line_user_id;
+    var caution=s.caution_flag===true||s.caution_flag==='true';
+    var unpaid=Number(s.unpaid_count)||0;
+    var uid=s.line_user_id;
+    return'<div class="scard" onclick="openStaffModal(\''+uid+'\')">'
+      +'<div class="sav">'+escapeHtml(name.charAt(0))+'</div>'
+      +'<div class="sinfo">'
+        +'<div class="sname">'+escapeHtml(name)+(caution?' ⚠️':'')+'</div>'
+        +'<div class="smeta">'+(s.name?'':'未登録 · ')+'確定 '+(s.approved_count||0)+'回'
+        +(s.last_date?' · '+String(s.last_date).slice(5,10).replace('-','/'):'')+'</div>'
+      +'</div>'
+      +'<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
+        +(unpaid>0?'<span class="sbdg sbdg-red">未払 '+unpaid+'</span>':'')
+        +(!s.address?'<span class="sbdg" style="background:#f0f0f0;color:#888;">📍未登録</span>':'')
+        +(s.eval_level?'<span class="sbdg sbdg-gold">'+s.eval_level+'</span>':'')
+        +'<div style="display:flex;gap:4px;margin-top:4px;" onclick="event.stopPropagation()">'
+          +'<button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:12px;" onclick="openEditStaffModal(\''+uid+'\')">✏️</button>'
+          +'<button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:12px;" onclick="sendProfileLink(\''+uid+'\')">📝</button>'
+          +'<button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:12px;color:var(--danger);border-color:var(--danger);" onclick="deactivateStaff(\''+uid+'\')">🗑️</button>'
+        +'</div>'
+      +'</div></div>';
+  }).join('');
+}
+
+// ─── Staff Modal ──────────────────────────
+// スタッフ詳細を再取得してタブ再描画（ネスト解消用ヘルパー）
+function _reloadStaffDetail(uid){
+  google.script.run
+    .withSuccessHandler(function(j){_sdDetail=JSON.parse(j);renderStaffTab();})
+    .withFailureHandler(function(){renderStaffTab();})
+    .api_getStaffDetail(uid);
+}
+function openStaffModal(uid){
+  _curStaff=(_staff||[]).find(function(s){return s.line_user_id===uid;})||{line_user_id:uid};
+  _sdDetail=null;_sdTab='wage';
+  document.getElementById('sm-name').textContent=_curStaff.name||_curStaff.display_name||uid;
+  document.querySelectorAll('.staff-tab').forEach(function(b,i){b.classList[i===0?'add':'remove']('on');});
+  document.getElementById('staff-modal').classList.add('open');
+  document.getElementById('sm-body').innerHTML='<div class="empty">読み込み中...</div>';
+  google.script.run
+    .withSuccessHandler(function(j){_sdDetail=JSON.parse(j);renderStaffTab();})
+    .withFailureHandler(function(e){document.getElementById('sm-body').innerHTML='<div class="empty">取得失敗</div>';})
+    .api_getStaffDetail(uid);
+}
+function closeStaffModal(){
+  document.getElementById('staff-modal').classList.remove('open');
+  _curStaff=null;_sdDetail=null;
+}
+function openMsgFromDetail(){
+  if(!_curStaff)return;
+  openMsgModal(_curStaff.line_user_id,_curStaff.name||_curStaff.display_name||_curStaff.line_user_id);
+}
+function switchStaffTab(tab,el){
+  _sdTab=tab;
+  document.querySelectorAll('.staff-tab').forEach(function(b){b.classList.remove('on');});
+  el.classList.add('on');renderStaffTab();
+}
+function renderStaffTab(){
+  var el=document.getElementById('sm-body');
+  if(!_sdDetail){el.innerHTML='<div class="empty">読み込み中...</div>';return;}
+  if(_sdTab==='wage') _renderSdWage(el);
+  else if(_sdTab==='eval') _renderSdEval(el);
+  else if(_sdTab==='chat') _renderSdChat(el);
+  else _renderSdSchedule(el);
+}
+function _renderSdChat(el){
+  var d=_sdDetail||{};
+  var cancelCount=(d.allCancel||[]).length;
+  var logs=(d.allChatLog||[]).slice().reverse(); // 新しい順
+  var html='<div style="margin-bottom:12px;display:flex;gap:12px;">'
+    +'<div style="background:var(--danger-lt);color:var(--danger);border-radius:8px;padding:8px 14px;font-weight:700;">キャンセル '+cancelCount+'回</div>'
+    +'<div style="background:var(--primary-lt);color:var(--primary);border-radius:8px;padding:8px 14px;font-weight:700;">会話 '+logs.length+'件</div>'
+  +'</div>';
+  if(!logs.length){el.innerHTML=html+'<div class="empty">会話ログなし</div>';return;}
+  html+=logs.map(function(r){
+    var isIn=r.dir==='in'||!r.dir;
+    return'<div style="margin-bottom:8px;">'
+      +'<div style="font-size:11px;color:var(--sub);margin-bottom:2px;">'+(isIn?'👤 ユーザー':'🤖 Bot')+' · '+escapeHtml(String(r.timestamp||'').slice(0,16))+'</div>'
+      +'<div style="background:'+(isIn?'var(--bg)':'var(--primary-lt)')+';border-radius:8px;padding:8px 10px;font-size:14px;white-space:pre-wrap;word-break:break-word;">'+escapeHtml(r.text||'')+'</div>'
+    +'</div>';
+  }).join('');
+  el.innerHTML=html;
+}
+
+function _renderSdWage(el){
+  var rows=(_sdDetail.allPay||[]).slice()
+    .sort(function(a,b){return String(b.date)>String(a.date)?1:-1;});
+  var unpaidRows=rows.filter(function(r){return!(r.paid===true||String(r.paid).toLowerCase()==='true');});
+  var total=rows.reduce(function(s,r){return s+Number(r.net_pay||0);},0);
+  var unpaidAmt=unpaidRows.reduce(function(s,r){return s+Number(r.net_pay||0);},0);
+  if(!rows.length){el.innerHTML='<div class="empty">支払記録なし</div>';return;}
+
+  var html='<div class="sumrow">'
+    +'<div class="sumc"><div class="sumn" style="font-size:19px;">¥'+total.toLocaleString()+'</div><div class="suml">累計手取</div></div>'
+    +'<div class="sumc"><div class="sumn" style="color:'+(unpaidRows.length?'var(--danger)':'var(--primary)')+';">'+unpaidRows.length+'</div><div class="suml">未払い件</div></div>'
+    +'<div class="sumc"><div class="sumn" style="font-size:19px;color:'+(unpaidRows.length?'var(--danger)':'var(--sub)')+';">¥'+unpaidAmt.toLocaleString()+'</div><div class="suml">未払い額</div></div>'
+    +'</div>';
+
+  if(unpaidRows.length){
+    html+='<div class="stitle">未払い</div>';
+    unpaidRows.forEach(function(r){
+      var pid=r.pay_id||'',net=Number(r.net_pay||0);
+      html+='<div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:8px;">'
+        +'<div style="flex:1;"><div style="font-weight:700;">'+escapeHtml(String(r.date||'').slice(0,10))+'</div>'
+        +'<div style="font-size:14px;color:var(--sub);">'+escapeHtml(r.job_title||r.job_id||'')+'</div></div>'
+        +'<div style="font-size:17px;font-weight:800;color:var(--danger);">¥'+net.toLocaleString()+'</div>'
+        +(pid?'<button class="btn btn-sm btn-accent" onclick="markPaidSingle(\''+pid+'\')">支払済</button>':'')
+        +'</div>';
+    });
+    html+='<button class="btn btn-accent btn-w" style="margin-top:12px;" onclick="markAllPaidForStaff()">まとめて支払済みにする</button>';
+  }
+
+  html+='<div class="stitle">全履歴</div>'
+    +'<div style="overflow-x:auto;"><table class="tbl">'
+    +'<tr><th>日付</th><th>手取</th><th>状態</th><th></th></tr>'
+    +rows.map(function(r){
+      var paid=r.paid===true||String(r.paid).toLowerCase()==='true';
+      var uid=r.user_id||'',dt=String(r.date||'').slice(0,10),jid=r.job_id||'';
+      return'<tr><td style="white-space:nowrap;">'+escapeHtml(dt)+'</td>'
+        +'<td style="font-weight:700;">¥'+Number(r.net_pay||0).toLocaleString()+'</td>'
+        +'<td style="font-size:14px;font-weight:700;color:'+(paid?'var(--primary)':'var(--danger)')+';">'+(paid?'済':'未払')+'</td>'
+        +'<td><button class="btn btn-sm" style="background:var(--danger);color:#fff;font-size:13px;padding:2px 6px;" onclick="adminHardDelete(\''+escapeHtml(uid)+'\',\''+escapeHtml(dt)+'\',\''+escapeHtml(jid)+'\')">完全削除</button></td>'
+        +'</tr>';
+    }).join('')+'</table></div>';
+  el.innerHTML=html;
+}
+
+function _renderSdEval(el){
+  var rows=(_sdDetail.allEval||[]).slice()
+    .sort(function(a,b){return String(b.work_date)>String(a.work_date)?1:-1;});
+  var uid=_curStaff.line_user_id;
+  var evalBtn='<button class="btn btn-primary btn-w" style="margin-bottom:14px;" onclick="openEvalModal(\''+uid+'\')">＋ 評価を入力</button>';
+  var cancelCount=_sdDetail.cancelCount||0, lateCount=_sdDetail.lateCount||0;
+
+  var summary='<div class="sumrow">'
+    +'<div class="sumc"><div class="sumn">'+(_curStaff.eval_avg||'-')+'</div><div class="suml">平均スコア</div></div>'
+    +'<div class="sumc"><div class="sumn" style="color:var(--accent);">'+(_curStaff.eval_level||'-')+'</div><div class="suml">レベル</div></div>'
+    +'<div class="sumc"><div class="sumn">'+rows.length+'</div><div class="suml">評価回数</div></div>'
+    +'</div>'
+    +(cancelCount||lateCount
+      ?'<div style="display:flex;gap:12px;font-size:15px;color:var(--sub);margin-bottom:12px;">'
+        +(cancelCount?'<span>キャンセル <b style="color:var(--danger);">'+cancelCount+'回</b></span>':'')
+        +(lateCount?'<span>遅刻 <b style="color:var(--recruit-color);">'+lateCount+'回</b></span>':'')
+        +'</div>':''
+    );
+
+  if(!rows.length){el.innerHTML=evalBtn+summary+'<div class="empty">評価なし</div>';return;}
+  el.innerHTML=evalBtn+summary
+    +'<table class="tbl"><tr><th>日付</th><th>スコア</th><th>Lv</th><th>コメント</th></tr>'
+    +rows.map(function(r){
+      return'<tr><td style="white-space:nowrap;">'+escapeHtml(String(r.work_date||'').slice(0,10))+'</td>'
+        +'<td>'+Number(r.score_avg||0)+'</td><td style="font-weight:700;color:var(--accent);">'+escapeHtml(r.level||'')+'</td>'
+        +'<td style="font-size:14px;color:var(--sub);">'+escapeHtml(r.next_policy||r.strong_point||'')+'</td></tr>';
+    }).join('')+'</table>';
+}
+
+function _renderSdSchedule(el){
+  var td=today();
+  var allWork=_sdDetail.allWork||[];
+
+  // 予定: allApplied の最新イベントから approved のみ抽出
+  // （cancelShift は Applied だけ更新するため WorkLog は古い approved が残る）
+  var appliedLatest={};
+  (_sdDetail.allApplied||[]).forEach(function(r){
+    var k=String(r.date||'').slice(0,10)+':'+(r.job_id||'');
+    var ex=appliedLatest[k];
+    if(!ex||String(r.timestamp||'')>String(ex.timestamp||''))appliedLatest[k]=r;
+  });
+  var future=Object.values(appliedLatest)
+    .filter(function(r){return r.event==='approved'&&String(r.date||'').slice(0,10)>=td;})
+    .sort(function(a,b){return String(a.date)>String(b.date)?1:-1;})
+    .map(function(r){
+      // job_title を _jobs から補完
+      var j=(_jobs||[]).find(function(x){return x.job_id===r.job_id;})||{};
+      return Object.assign({},r,{job_title:j.title||r.job_id||''});
+    });
+
+  // 実績: WorkLog の checkout / worked / manual（手動追記）
+  var past=allWork.filter(function(r){return r.action==='checkout'||r.action==='worked'||r.action==='manual';})
+    .sort(function(a,b){return String(b.date)>String(a.date)?1:-1;});
+  var uid=_curStaff.line_user_id;
+  var html='';
+  if(future.length){
+    html+='<div class="stitle">予定</div>';
+    future.forEach(function(r){
+      var d=String(r.date||'').slice(0,10),jt=r.job_title||r.job_id||'';
+      html+='<div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);">'
+        +'<div style="flex:1;"><div style="font-weight:700;">'+escapeHtml(d)+'</div>'
+        +'<div style="font-size:14px;color:var(--sub);">'+escapeHtml(jt)+'</div></div>'
+        +'<div style="display:flex;gap:6px;align-items:center;">'
+        +'<span style="padding:2px 8px;border-radius:20px;font-size:13px;font-weight:700;background:var(--primary-lt);color:var(--primary);">予定</span>'
+        +(d<=td?'<button class="btn btn-sm btn-accent" onclick="doComplete(\''+uid+'\',\''+escapeHtml(d)+'\',\''+r.job_id+'\')">完了</button>':'')
+        +'<button class="btn btn-sm btn-outline" onclick="doCancel(\''+uid+'\',\''+escapeHtml(d)+'\',\''+r.job_id+'\')">取消</button>'
+        +'</div></div>';
+    });
+  }
+  if(past.length){
+    html+='<div class="stitle" style="margin-top:'+(future.length?16:0)+'px;">実績</div>';
+    past.slice(0,20).forEach(function(r){
+      var d=String(r.date||'').slice(0,10),jt=r.job_title||r.job_id||'';
+      var lid=r.log_id||'';
+      var st=r.start_time||'',et=r.end_time||'',tp=Number(r.transport)||0;
+      html+='<div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:6px;">'
+        +'<div style="flex:1;min-width:0;">'
+          +'<div style="font-weight:700;">'+escapeHtml(d)+(r._corrected?' <span style="font-size:12px;color:var(--recruit-color);">修正済</span>':'')+'</div>'
+          +'<div style="font-size:14px;color:var(--sub);">'+escapeHtml(jt)+(r.actual_hours?' · '+Number(r.actual_hours)+'h':'')+'</div>'
+        +'</div>'
+        +'<div style="font-size:15px;font-weight:700;flex-shrink:0;">'+(r.wage?'¥'+Number(r.wage).toLocaleString():'')+'</div>'
+        +(lid
+          ?'<button class="btn btn-sm btn-outline" style="padding:4px 8px;font-size:13px;" onclick="openWorkLogEdit(\''+escapeHtml(lid)+'\',\''+escapeHtml(d)+'\',\''+r.job_id+'\',\''+escapeHtml(st)+'\',\''+escapeHtml(et)+'\','+tp+')">修正</button>'
+          +'<button class="btn btn-sm" style="padding:4px 8px;font-size:13px;background:#f5f5f5;color:var(--sub);" onclick="deleteWorkLog(\''+escapeHtml(lid)+'\',\''+escapeHtml(d)+'\')">削除</button>'
+          :''
+        )
+        +'</div>';
+    });
+  }
+  html+='<div style="margin-top:12px;">'
+    +'<button class="btn btn-outline btn-w" style="margin-bottom:0;" onclick="openWorkLogAdd()">＋ 勤務記録を手動追記</button>'
+    +'</div>';
+  if(!future.length&&!past.length)html='<div class="empty">データなし</div>';
+  el.innerHTML=html;
+}
+
+// ─── Staff Actions ────────────────────────
+function markPaidSingle(pid){
+  if(!pid)return;showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);
+      if(r.ok){
+        toast('✅ 支払済みに更新しました');
+        _reloadStaffDetail(_curStaff.line_user_id);
+        _refreshShiftsOnly();
+        _refreshStaffOnly();
+      }else{toast('❌ 更新に失敗しました');showLoader(false);}
+    })
+    .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+    .api_markAsPaid(pid);
+}
+function markAllPaidForStaff(){
+  if(!_sdDetail||!_curStaff)return;
+  var ids=(_sdDetail.allPay||[])
+    .filter(function(r){return!(r.paid===true||String(r.paid).toLowerCase()==='true');})
+    .map(function(r){return r.pay_id;}).filter(Boolean);
+  if(!ids.length)return;
+  if(!confirm(ids.length+'件を全て支払済みにしますか？'))return;
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);toast('✅ '+r.count+'件を支払済みにしました');
+      _reloadStaffDetail(_curStaff.line_user_id);
+      _refreshShiftsOnly();
+      _refreshStaffOnly();
+    })
+    .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+    .api_markAsPaidBulk(JSON.stringify(ids));
+}
+function doComplete(uid,date,jid){
+  if(!confirm('勤務完了にして支払記録を追加しますか？'))return;showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);
+      toast(r.ok?(r.added?'✅ 勤務完了・支払記録を追加しました':'✅ 勤務完了（支払記録は既存）'):'❌ エラー');
+      _reloadStaffDetail(uid);
+      _refreshShiftsOnly();
+    })
+    .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+    .api_completeWork(uid,date,jid);
+}
+function adminHardDelete(uid,date,jid){
+  if(!confirm('【完全削除】\n'+date+' の記録をスプレッドシートから物理削除します。\n元に戻せません。続けますか？'))return;
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);
+      toast(r.msg||'完全削除しました');
+      showLoader(false);
+      _sdDetail=null;
+      _reloadStaffDetail(uid);
+    })
+    .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+    .api_adminHardDelete(uid,date,jid);
+}
+function cancelApplied(uid,date,jid){
+  if(!confirm('この応募を削除しますか？'))return;showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);toast(r.msg||'削除しました');
+      showLoader(false);
+      // 即時フィルタ：Applied キャンセル後、同 key の approved を _shifts から除去して即描画
+      var tKey=uid+':'+date+':'+(jid||'');
+      _shifts=_shifts.filter(function(s){
+        var sKey=(s.user_id||'')+':'+String(s.date||'').slice(0,10)+':'+(s.job_id||'');
+        return !(sKey===tKey&&(s.event==='approved'||s.event==='applied'));
+      });
+      renderCalendar();
+      _refreshShifts(); // バックグラウンドで完全再取得
+      closeMo('modal-day');
+    })
+    .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+    .api_fullDeleteShift(uid,date,jid);
+}
+function doCancel(uid,date,jid){
+  if(!confirm('シフトを取消しますか？'))return;showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);toast(r.msg||'取消しました');
+      showLoader(false);_refreshShifts();
+      if(_curStaff){_sdDetail=null;_reloadStaffDetail(uid);}
+    })
+    .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+    .api_cancelShift(uid,date,jid,'');
+}
+
+// ─── Eval Modal ───────────────────────────
+function openEvalModal(uid){
+  var s=(_staff||[]).find(function(x){return x.line_user_id===uid;})||{};
+  var name=s.name||s.display_name||uid;
+  var now=new Date();
+  var past30=_fmt(new Date(now.getFullYear(),now.getMonth(),now.getDate()-30));
+  var dateSet={};
+  _shifts.filter(function(r){
+    return r.user_id===uid&&r.event==='approved'&&String(r.date||'').slice(0,10)>=past30;
+  }).forEach(function(r){var d=String(r.date||'').slice(0,10);if(!dateSet[d])dateSet[d]=r.job_id;});
+  var dates=Object.keys(dateSet).sort().reverse();
+  var fields=[['punctuality','時間厳守'],['attitude','勤務態度'],['instruction','指示理解'],['accuracy','作業精度'],['speed','作業速度'],['report','報連相'],['teamwork','協調性'],['rehire','再依頼']];
+  var html='<p style="color:var(--sub);font-size:15px;margin-bottom:12px;">'+escapeHtml(name)+'</p>';
+  if(!dates.length){html+='<div class="empty">過去30日に確定シフトがありません</div><div class="mo-actions"><button class="mo-cancel" onclick="closeMo(\'modal-eval\')">閉じる</button></div>';document.getElementById('modal-eval-body').innerHTML=html;openMo('modal-eval');return;}
+  html+='<div class="fr"><label class="fl">勤務日</label><select id="eval-date-sel" class="fi" onchange="if(_curEval)_curEval.date=this.value">'
+    +dates.map(function(d){return'<option value="'+d+'">'+d+'</option>';}).join('')+'</select></div>';
+  fields.forEach(function(f){
+    html+='<div class="scrow"><div class="scl">'+f[1]+'</div><div class="scbs">'
+      +[1,2,3,4,5].map(function(v){return'<button class="scb" data-key="'+f[0]+'" data-val="'+v+'" onclick="selScore(this)">'+v+'</button>';}).join('')+'</div></div>';
+  });
+  html+='<div class="fr" style="margin-top:6px;"><label class="fl">良かった点</label><textarea id="ev-strong" class="fi" rows="2" style="height:auto;"></textarea></div>'
+    +'<div class="fr"><label class="fl">改善点</label><textarea id="ev-caution" class="fi" rows="2" style="height:auto;"></textarea></div>'
+    +'<div class="mo-actions"><button class="mo-cancel" onclick="closeMo(\'modal-eval\')">キャンセル</button><button class="mo-ok" onclick="submitEval()">保存する</button></div>';
+  _curEval={uid:uid,date:dates[0]};
+  document.getElementById('modal-eval-body').innerHTML=html;
+  openMo('modal-eval');
+}
+function selScore(el){
+  document.querySelectorAll('.scb[data-key="'+el.dataset.key+'"]').forEach(function(b){b.classList.remove('on');});
+  el.classList.add('on');
+}
+function submitEval(){
+  if(!_curEval)return;
+  var fields=['punctuality','attitude','instruction','accuracy','speed','report','teamwork','rehire'],data={};
+  for(var i=0;i<fields.length;i++){
+    var btn=document.querySelector('.scb[data-key="'+fields[i]+'"].on');
+    if(!btn){toast('全項目を評価してください');return;}
+    data[fields[i]]=btn.dataset.val;
+  }
+  data.strong_point=document.getElementById('ev-strong').value;
+  data.caution=document.getElementById('ev-caution').value;
+  data.next_policy='';
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      showLoader(false);
+      var r=JSON.parse(j);toast('評価保存: '+r.level+' (avg '+r.avg+')');
+      closeMo('modal-eval');
+      if(_sdDetail&&_curStaff)_reloadStaffDetail(_curStaff.line_user_id);
+    })
+    .withFailureHandler(function(e){showLoader(false);toast('❌ '+(e&&e.message||'評価の保存に失敗しました'));})
+    .api_saveEvaluation(_curEval.uid,_curEval.date,JSON.stringify(data));
+}
+
+// ─── Msg Modal ────────────────────────────
+function openMsgModal(uid,name){
+  document.getElementById('modal-msg-ttl').textContent=(name||uid)+' に連絡';
+  document.getElementById('modal-msg-body').innerHTML=
+    '<div class="fr"><label class="fl">メッセージ</label>'
+    +'<textarea id="msg-text" class="fi" rows="5" style="height:auto;" placeholder="メッセージを入力..."></textarea></div>'
+    +'<div class="mo-actions">'
+    +'<button class="mo-cancel" onclick="closeMo(\'modal-msg\')">キャンセル</button>'
+    +'<button class="mo-ok" onclick="sendMsg(\''+uid+'\')">送信する</button></div>';
+  openMo('modal-msg');
+}
+function sendMsg(uid){
+  var text=document.getElementById('msg-text').value;
+  if(!text.trim()){toast('メッセージを入力してください');return;}
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);toast(r.ok?'✅ 送信しました':'❌ '+r.msg);
+      if(r.ok)closeMo('modal-msg');showLoader(false);
+    })
+    .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+    .api_sendLineMessage(uid,text);
+}
+
+// ─── Docs ─────────────────────────────────
+function populateDocUser(){
+  var opts=(_staff||[]).map(function(s){
+    return'<option value="'+s.line_user_id+'">'+escapeHtml(s.name||s.display_name||s.line_user_id)+'</option>';
+  }).join('');
+  document.getElementById('doc-user').innerHTML=opts;
+  // 応募追加フォームも同期
+  var applyStaff=document.getElementById('apply-staff');
+  if(applyStaff)applyStaff.innerHTML=opts;
+  var applyJob=document.getElementById('apply-job');
+  if(applyJob)applyJob.innerHTML=(_jobs||[]).map(function(j){
+    return'<option value="'+j.job_id+'">'+escapeHtml(j.title||'')+'</option>';
+  }).join('');
+  var applyDate=document.getElementById('apply-date');
+  if(applyDate&&!applyDate.value)applyDate.value=today();
+}
+function genPayslip(){
+  var u=document.getElementById('doc-user').value,ym=document.getElementById('doc-month').value;
+  if(!u){toast('スタッフを選択してください');return;}showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){var r=JSON.parse(j);toast(r.ok?'賃金台帳を生成しました':(r.msg||'エラーが発生しました'));showLoader(false);})
+    .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+    .api_generatePayslip(u,ym);
+}
+function genBulkPayslip(){
+  var ym=document.getElementById('bulk-payslip-month').value;
+  if(!ym){toast('対象月を選択してください');return;}
+  showLoader(true);
+  document.getElementById('bulk-payslip-result').innerHTML='<div style="color:var(--sub);">生成中... しばらくお待ちください</div>';
+  google.script.run
+    .withSuccessHandler(function(j){
+      showLoader(false);
+      var r=JSON.parse(j);
+      var el=document.getElementById('bulk-payslip-result');
+      if(!r.ok){el.innerHTML='<span style="color:var(--danger);">'+escapeHtml(r.msg)+'</span>';return;}
+      el.innerHTML='<div style="padding:8px 0;">'
+        +'<span style="color:var(--primary);font-weight:700;">'+r.total+'名分 生成完了</span>'
+        +' &nbsp; <a href="'+r.url+'" target="_blank" style="color:var(--primary);font-weight:700;font-size:15px;">📄 全スタッフ 賃金台帳を開く</a>'
+        +'</div>';
+    })
+    .withFailureHandler(function(e){
+      showLoader(false);
+      document.getElementById('bulk-payslip-result').innerHTML='<span style="color:var(--danger);">❌ '+(e&&e.message||'エラー')+'</span>';
+    })
+    .api_generateBulkPayslip(ym);
+}
+function genAttendance(){
+  var u=document.getElementById('doc-user').value,ym=document.getElementById('doc-month').value;
+  if(!u){toast('スタッフを選択してください');return;}showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){var r=JSON.parse(j);toast(r.ok?'出勤簿を生成しました':(r.msg||'エラーが発生しました'));showLoader(false);})
+    .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+    .api_generateAttendance(u,ym);
+}
+function genReceipt(){
+  var u=document.getElementById('doc-user').value,d=document.getElementById('doc-date').value;
+  if(!u){toast('スタッフを選択してください');return;}
+  if(!d){toast('対象日を選択してください');return;}
+  showLoader(true);
+  var el=document.getElementById('docs-single-result');
+  el.innerHTML='';
+  google.script.run
+    .withSuccessHandler(function(j){
+      showLoader(false);
+      var r=JSON.parse(j);
+      if(r.ok) el.innerHTML='<a href="'+r.url+'" target="_blank" style="color:var(--primary);font-weight:700;">📄 領収書を開く</a>';
+      else el.innerHTML='<span style="color:var(--danger);">'+escapeHtml(r.msg||'エラー')+'</span>';
+    })
+    .withFailureHandler(function(e){showLoader(false);el.innerHTML='<span style="color:var(--danger);">❌ '+escapeHtml(e.message)+'</span>';})
+    .api_generateReceipt(u,d);
+}
+function genPaymentReport(){
+  var u=document.getElementById('doc-user').value,y=document.getElementById('doc-year').value;
+  if(!u){toast('スタッフを選択してください');return;}
+  if(!y){toast('対象年を入力してください');return;}
+  showLoader(true);
+  var el=document.getElementById('docs-single-result');
+  el.innerHTML='';
+  google.script.run
+    .withSuccessHandler(function(j){
+      showLoader(false);
+      var r=JSON.parse(j);
+      if(r.ok) el.innerHTML='<a href="'+r.url+'" target="_blank" style="color:var(--primary);font-weight:700;">📄 支払調書を開く</a>';
+      else el.innerHTML='<span style="color:var(--danger);">'+escapeHtml(r.msg||'エラー')+'</span>';
+    })
+    .withFailureHandler(function(e){showLoader(false);el.innerHTML='<span style="color:var(--danger);">❌ '+escapeHtml(e.message)+'</span>';})
+    .api_generatePaymentReport(u,y);
+}
+function genWithholdingCert(){
+  var u=document.getElementById('doc-user').value;
+  var y=document.getElementById('doc-year').value;
+  var ed=document.getElementById('doc-enddate').value||null;
+  if(!u){toast('スタッフを選択してください');return;}
+  if(!y){toast('対象年を入力してください');return;}
+  showLoader(true);
+  var el=document.getElementById('docs-single-result');
+  el.innerHTML='';
+  google.script.run
+    .withSuccessHandler(function(j){
+      showLoader(false);
+      var r=JSON.parse(j);
+      if(r.ok) el.innerHTML='<a href="'+r.url+'" target="_blank" style="color:var(--primary);font-weight:700;">📄 源泉徴収票を開く</a>';
+      else el.innerHTML='<span style="color:var(--danger);">'+escapeHtml(r.msg||'エラー')+'</span>';
+    })
+    .withFailureHandler(function(e){showLoader(false);el.innerHTML='<span style="color:var(--danger);">❌ '+escapeHtml(e.message)+'</span>';})
+    .api_generateWithholdingCert(u,y,ed);
+}
+function genBulkWithholdingCert(){
+  var y=document.getElementById('bulk-withholding-year').value;
+  var ed=document.getElementById('bulk-withholding-enddate').value||null;
+  if(!y){toast('対象年を入力してください');return;}
+  var label=y+'年分'+(ed?' (〜'+ed+')':'');
+  if(!confirm(label+' 全スタッフの源泉徴収票を一括生成します。よろしいですか？'))return;
+  showLoader(true);
+  var el=document.getElementById('bulk-withholding-result');
+  el.innerHTML='';
+  google.script.run
+    .withSuccessHandler(function(j){
+      showLoader(false);
+      var r=JSON.parse(j);
+      if(r.ok) el.innerHTML='<a href="'+r.url+'" target="_blank" style="color:var(--primary);font-weight:700;">📄 一括源泉徴収票を開く</a>（'+r.total+'名分）';
+      else el.innerHTML='<span style="color:var(--danger);">'+escapeHtml(r.msg||'エラー')+'</span>';
+    })
+    .withFailureHandler(function(e){showLoader(false);el.innerHTML='<span style="color:var(--danger);">❌ '+escapeHtml(e.message)+'</span>';})
+    .api_generateBulkWithholdingCert(y,ed);
+}
+function openDocFolder(folderName){
+  google.script.run
+    .withSuccessHandler(function(j){var r=JSON.parse(j);if(r.ok)window.open(r.url,'_blank');else toast('フォルダが見つかりません');})
+    .withFailureHandler(function(){toast('フォルダ取得に失敗しました');})
+    .api_getDocFolderUrl(folderName);
+}
+function loadWithholdingHalf(){
+  var y=document.getElementById('withholding-half-year').value;
+  var h=document.getElementById('withholding-half').value;
+  if(!y){toast('年を入力してください');return;}
+  var el=document.getElementById('withholding-half-result');
+  el.innerHTML='<div class="empty">集計中...</div>';
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);
+      if(!r.ok){el.innerHTML='<span style="color:var(--danger);">'+escapeHtml(r.msg||'エラー')+'</span>';return;}
+      var rows=r.breakdown.map(function(b){
+        return '<tr><td>'+escapeHtml(b.name)+'</td><td style="text-align:right;">'+b.days+'日</td>'
+          +'<td style="text-align:right;">¥'+b.wage.toLocaleString()+'</td>'
+          +'<td style="text-align:right;color:var(--danger);">¥'+b.withholding.toLocaleString()+'</td></tr>';
+      }).join('');
+      el.innerHTML='<div style="margin-bottom:8px;font-size:13px;color:var(--sub);">対象期間: '+escapeHtml(r.period)+'</div>'
+        +'<div style="background:#fff3cd;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:14px;">'
+        +'<b>納付期限: '+escapeHtml(r.dueDate)+'</b>'
+        +'<span style="margin-left:16px;font-size:16px;font-weight:800;color:var(--danger);">納付額: ¥'+r.totalWithholding.toLocaleString()+'</span>'
+        +'</div>'
+        +'<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+        +'<tr style="background:var(--bg);"><th style="text-align:left;padding:6px 8px;">氏名</th><th style="padding:6px 8px;">勤務日数</th><th style="padding:6px 8px;">支払額</th><th style="padding:6px 8px;">源泉</th></tr>'
+        +rows
+        +'<tr style="font-weight:800;border-top:2px solid var(--line);">'
+        +'<td style="padding:6px 8px;">合計 ('+r.staffCount+'名)</td><td></td>'
+        +'<td style="text-align:right;padding:6px 8px;">¥'+r.totalWage.toLocaleString()+'</td>'
+        +'<td style="text-align:right;padding:6px 8px;color:var(--danger);">¥'+r.totalWithholding.toLocaleString()+'</td>'
+        +'</tr></table>';
+    })
+    .withFailureHandler(function(e){el.innerHTML='<span style="color:var(--danger);">❌ '+escapeHtml(e.message)+'</span>';})
+    .api_getWithholdingByHalf(y,h);
+}
+// ─── 応募追加（書類ページ） ────────────────
+function addApplyEntry(mode){
+  var userId=document.getElementById('apply-staff').value;
+  var date=document.getElementById('apply-date').value;
+  var jobId=document.getElementById('apply-job').value;
+  if(!userId||!date||!jobId){toast('全項目を選択してください');return;}
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);
+      toast(r.ok?'✅ '+(mode==='approve'?'確定として追加しました':'応募を追加しました'):'❌ '+(r.msg||'エラー'));
+      showLoader(false);
+      if(r.ok)_refreshShifts();
+    })
+    .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+    .api_addShiftForDate(userId, date, jobId, mode==='approve');
+}
+
+// ─── 支払管理（書類ページ） ────────────────
+var _docsPay=[], _docsPayGroups={};
+function loadDocsPayList(){
+  document.getElementById('docs-pay-list').innerHTML='<div class="empty">読み込み中...</div>';
+  _docsPay=[];_docsPayGroups={};
+  google.script.run
+    .withSuccessHandler(function(j){
+      var rows=JSON.parse(j);
+      if(!rows.length){document.getElementById('docs-pay-list').innerHTML='<div class="empty">✅ 未払いはありません</div>';return;}
+      var groups={};
+      rows.forEach(function(r){
+        var uid=r.user_id||'';
+        if(!groups[uid]) groups[uid]={name:r.staff_name||r.user_id||'不明',total:0,records:[],dates:[]};
+        groups[uid].total+=Number(r.net_pay||0);
+        groups[uid].records.push({pay_id:r.pay_id||'',user_id:r.user_id,date:r.date,job_id:r.job_id,wage:r.wage,transport:r.transport,net_pay:r.net_pay});
+        groups[uid].dates.push(String(r.date||'').slice(0,10)+' · '+(r.job_title||r.job_id||''));
+      });
+      Object.keys(groups).forEach(function(uid){_docsPayGroups[uid]=groups[uid].records;});
+      var html=Object.keys(groups).map(function(uid){
+        var g=groups[uid];
+        return'<div style="padding:10px 0;border-bottom:1px solid var(--line);">'
+          +'<div style="display:flex;align-items:center;gap:8px;">'
+            +'<input type="checkbox" style="width:16px;height:16px;accent-color:var(--primary);flex-shrink:0;" onchange="toggleDocsPayGroup(\''+escapeHtml(uid)+'\',this)">'
+            +'<div style="flex:1;">'
+              +'<div style="font-weight:700;">'+escapeHtml(g.name)+'</div>'
+              +'<div style="font-size:13px;color:var(--sub);">'+g.dates.map(escapeHtml).join('<br>')+'</div>'
+            +'</div>'
+            +'<div style="font-weight:800;color:var(--danger);flex-shrink:0;white-space:nowrap;">合計 ¥'+g.total.toLocaleString()+'</div>'
+          +'</div>'
+        +'</div>';
+      }).join('');
+      html+='<button class="btn btn-accent btn-w" style="margin-top:12px;" onclick="doDocsBulkPay()">選択分を支払済にする</button>';
+      document.getElementById('docs-pay-list').innerHTML=html;
+    })
+    .withFailureHandler(function(e){document.getElementById('docs-pay-list').innerHTML='<div class="empty">取得失敗</div>';toast('❌ '+(e&&e.message||'読み込み失敗'));})
+    .api_getUnpaidRecords();
+}
+
+// ─── 会計サマリー（手数料） ───
+function loadFeeSummary(){
+  var m=document.getElementById('fee-month').value; // YYYY-MM
+  if(!m){toast('月を選んでください');return;}
+  var p=m.split('-');
+  document.getElementById('fee-summary').innerHTML='<div class="empty" style="font-size:13px;color:var(--sub);">読み込み中...</div>';
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);
+      if(r.ok===false){document.getElementById('fee-summary').innerHTML='<div class="empty">集計に失敗しました</div>';toast('❌ '+(r.msg||'集計失敗'));return;}
+      var net=Number(r.total_net_pay||0), fee=Number(r.fee_amount||0), wage=Number(r.total_wage||0);
+      document.getElementById('fee-summary').innerHTML=
+        '<div style="text-align:center;color:var(--sub);font-size:13px;margin-bottom:8px;">'+r.year+'年'+r.month+'月（確定'+r.count+'件）</div>'
+        +'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--line);"><span>支払い総額（手取り）</span><span style="font-weight:800;">¥'+net.toLocaleString()+'</span></div>'
+        +'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--line);"><span style="color:var(--sub);">手数料ベース（日当合計）</span><span style="color:var(--sub);">¥'+wage.toLocaleString()+'</span></div>'
+        +'<div style="display:flex;justify-content:space-between;align-items:baseline;padding:10px 0 2px;"><span style="font-weight:700;">手数料（'+r.fee_rate+'%）</span><span style="font-weight:800;font-size:20px;color:var(--primary);">¥'+fee.toLocaleString()+'</span></div>'
+        +'<div style="font-size:11px;color:var(--sub);">※イフリートへの請求額の目安。料率はFEE_RATEで変更可。</div>';
+    })
+    .withFailureHandler(function(e){document.getElementById('fee-summary').innerHTML='<div class="empty">取得失敗</div>';toast('❌ '+(e&&e.message||'読み込み失敗'));})
+    .api_getFeeSummary(p[0],p[1]);
+}
+// 上位職 → 排他する下位職タイトル（C方式ハードコード）
+var _JOB_EXCL = { '温泉スタッフ': ['温泉施設清掃'] };
+
+function onJobCheck(el){
+  if(!el.checked) return;
+  var title=el.getAttribute('data-title');
+  var excl=_JOB_EXCL[title]||[];
+  if(!excl.length) return;
+  document.querySelectorAll('.edit-job-cb').forEach(function(cb){
+    if(excl.indexOf(cb.getAttribute('data-title'))>=0) cb.checked=false;
+  });
+}
+
+// ─── スタッフ編集・削除 ───────────────────────
+function openEditStaffModal(uid){
+  var s=(_staff||[]).find(function(x){return x.line_user_id===uid;})||{};
+  var name=s.name||s.display_name||uid;
+  var curJobs=(s.job_id||'').split(',').map(function(j){return j.trim();}).filter(Boolean);
+  document.getElementById('edit-staff-uid').value=uid;
+  document.getElementById('edit-staff-name').value=name;
+  document.getElementById('edit-staff-job-wrap').innerHTML=(_jobs||[]).map(function(j){
+    var chk=curJobs.indexOf(j.job_id)>=0;
+    return'<label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);">'
+      +'<input type="checkbox" class="edit-job-cb" value="'+escapeHtml(j.job_id||'')+'" data-title="'+escapeHtml(j.title||'')+'" onchange="onJobCheck(this)"'+(chk?' checked':'')+'>'
+      +'<span>'+escapeHtml(j.title||j.job_id||'')+'</span>'
+      +'</label>';
+  }).join('');
+  openMo('modal-edit-staff');
+}
+function doEditStaff(){
+  var uid=document.getElementById('edit-staff-uid').value;
+  var name=document.getElementById('edit-staff-name').value.trim();
+  var cbs=document.querySelectorAll('.edit-job-cb:checked');
+  var jobId=Array.from(cbs).map(function(c){return c.value;}).join(',');
+  if(!name){toast('名前を入力してください');return;}
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);showLoader(false);
+      if(!r.ok){toast('❌ '+(r.msg||'失敗'));return;}
+      closeMo('modal-edit-staff');
+      toast('✅ 更新しました');_refreshStaffOnly();
+    })
+    .withFailureHandler(function(e){toast('❌ '+(e&&e.message||'失敗'));showLoader(false);})
+    .api_updateStaff(uid,name,jobId);
+}
+function deactivateStaff(uid){
+  var s=(_staff||[]).find(function(x){return x.line_user_id===uid;})||{};
+  var name=s.name||s.display_name||uid;
+  if(!confirm(name+' を名簿から削除しますか？\n（この操作は取り消せません）'))return;
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);showLoader(false);
+      if(r.ok){toast('✅ 削除しました');_refreshStaffOnly();}
+      else toast('❌ '+(r.msg||'失敗'));
+    })
+    .withFailureHandler(function(e){toast('❌ '+(e&&e.message||'失敗'));showLoader(false);})
+    .api_deactivateStaff(uid);
+}
+function sendProfileLink(uid) {
+  if (!confirm('このスタッフに登録フォームのリンクをLINEで送りますか？')) return;
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j) {
+      showLoader(false);
+      var r = JSON.parse(j);
+      toast(r.ok ? '✅ 登録リンクを送信しました' : '❌ ' + r.msg);
+    })
+    .withFailureHandler(function(e) { showLoader(false); toast('❌ ' + (e.message||'')); })
+    .api_sendProfileLink(uid);
+}
+function sendProfileLinkAll() {
+  if (!confirm('全スタッフに登録フォームのリンクをLINEで送信します。よろしいですか？')) return;
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j) {
+      showLoader(false);
+      var r = JSON.parse(j);
+      document.getElementById('profile-link-all-result').textContent =
+        r.ok ? ('✅ 送信完了 ' + r.sent + '名 / 失敗 ' + r.failed + '名') : ('❌ ' + r.msg);
+    })
+    .withFailureHandler(function(e) { showLoader(false); toast('❌ ' + (e.message||'')); })
+    .api_sendProfileLinkAll();
+}
+
+// ─── 職種フィルター（名簿用） ──────────────────────
+function _initJobFilterSel(){
+  var sel=document.getElementById('job-filter-sel');
+  if(!sel||!_jobs||!_jobs.length)return;
+  var cur=sel.value;
+  sel.innerHTML='<option value="">💼 全職種</option>'+_jobs.map(function(j){
+    return'<option value="'+escapeHtml(j.job_id||'')+'">'+escapeHtml(j.title||j.job_id||'')+'</option>';
+  }).join('');
+  if(cur){sel.value=cur;}
+}
+function filterJobRoster(jid){
+  _rJobFilter=jid;
+  renderRoster();
+  var wrap=document.getElementById('job-rate-inline-wrap');
+  if(!jid){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  _renderJobRateInline(jid);
+}
+function _renderJobRateInline(jid){
+  var el=document.getElementById('job-rate-list-inline');
+  if(!el||!_jobs)return;
+  var j=_jobs.find(function(x){return x.job_id===jid;})||{};
+  var wage=Number(j.hourly_wage||j.wage||0);
+  var trans=Number(j.transport||0);
+  var members=(_staff||[]).filter(function(s){return(s.job_id||'').split(',').map(function(x){return x.trim();}).indexOf(jid)>=0;});
+  el.innerHTML=
+    '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">'
+      +'<span style="font-weight:700;font-size:14px;">'+escapeHtml(j.title||jid)+'</span>'
+      +'<label style="font-size:13px;color:var(--sub);margin-left:auto;">時給</label>'
+      +'<input type="number" id="jr-wage-inline" value="'+wage+'" class="fi" style="width:80px;text-align:right;">円'
+      +'<label style="font-size:13px;color:var(--sub);margin-left:4px;">交通費</label>'
+      +'<input type="number" id="jr-trans-inline" value="'+trans+'" class="fi" style="width:70px;text-align:right;">円'
+      +'<button class="btn btn-outline btn-sm" onclick="saveJobRateInline(\''+escapeHtml(jid)+'\')">保存</button>'
+    +'</div>'
+    +'<div style="font-size:13px;color:var(--sub);">登録スタッフ '+members.length+'人'
+      +'<button class="btn btn-outline btn-sm" style="margin-left:8px;font-size:12px;" onclick="autoAssignJob(\''+escapeHtml(jid)+'\')">参加経験者を自動登録</button>'
+    +'</div>';
+}
+function saveJobRateInline(jid){
+  var wage=document.getElementById('jr-wage-inline').value;
+  var trans=document.getElementById('jr-trans-inline').value;
+  var w=Number(wage); if(isNaN(w)||w<0){toast('時給は0以上を入力してください');return;}
+  var t=Number(trans); if(isNaN(t)||t<0){toast('交通費は0以上を入力してください');return;}
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){var r=JSON.parse(j);showLoader(false);if(r.ok)toast('✅ 更新しました');else toast('❌ '+(r.msg||'失敗'));})
+    .withFailureHandler(function(e){toast('❌ '+(e&&e.message||'失敗'));showLoader(false);})
+    .api_updateJob(jid,Number(wage),Number(trans));
+}
+
+// ─── 職種別 時給・交通費（モーダル用） ──────────────
+// suffix: '' = モーダルのみ
+function openJobRateModal(){
+  _initJobRateSelect('');
+  openMo('modal-job-rate');
+}
+function _initJobRateSelect(sfx){
+  sfx = sfx || '';
+  var sel=document.getElementById('job-rate-select'+sfx);
+  if(!sel||!_jobs||!_jobs.length)return;
+  var cur=sel.value;
+  sel.innerHTML=_jobs.map(function(j){
+    return'<option value="'+escapeHtml(j.job_id||'')+'">'+escapeHtml(j.title||j.job_id||'')+'</option>';
+  }).join('');
+  if(cur)sel.value=cur;
+  _renderJobRates(sfx);
+}
+function renderJobRates(){ _renderJobRates(''); }
+function renderJobRatesInline(){ _renderJobRates('-inline'); }
+function _renderJobRates(sfx){
+  sfx = sfx || '';
+  var sel=document.getElementById('job-rate-select'+sfx);
+  var el=document.getElementById('job-rate-list'+sfx);
+  if(!sel||!el||!_jobs||!_jobs.length)return;
+  var jid=sel.value;
+  var j=_jobs.find(function(x){return x.job_id===jid;})||{};
+  var wage=Number(j.hourly_wage||j.wage||0);
+  var trans=Number(j.transport||0);
+  var members=(_staff||[]).filter(function(s){return(s.job_id||'').split(',').map(function(x){return x.trim();}).indexOf(jid)>=0;});
+  var wid='jr-wage'+sfx, tid='jr-trans'+sfx;
+
+  var html='<div style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px;">'
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+      +'<label style="font-size:13px;color:var(--sub);white-space:nowrap;">時給</label>'
+      +'<input type="number" id="'+wid+'" value="'+wage+'" class="fi" style="width:90px;text-align:right;">円'
+      +'<label style="font-size:13px;color:var(--sub);white-space:nowrap;margin-left:8px;">交通費</label>'
+      +'<input type="number" id="'+tid+'" value="'+trans+'" class="fi" style="width:80px;text-align:right;">円'
+      +'<button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="saveJobRate(\''+escapeHtml(jid)+'\',\''+sfx+'\')">保存</button>'
+    +'</div>'
+  +'</div>';
+  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+    +'<div style="font-size:14px;font-weight:700;color:var(--sub);">登録スタッフ（'+members.length+'人）</div>'
+    +'<button class="btn btn-outline btn-sm" style="margin-left:auto;font-size:12px;" onclick="autoAssignJob(\''+escapeHtml(jid)+'\')">参加経験者を自動登録</button>'
+  +'</div>';
+  if(!members.length){
+    html+='<div class="empty" style="font-size:13px;">登録なし。「参加経験者を自動登録」かスタッフの✏️から登録できます</div>';
+  } else {
+    html+=members.map(function(s){
+      var name=s.name||s.display_name||s.line_user_id;
+      var unpaid=Number(s.unpaid_count)||0;
+      return'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);">'
+        +'<div style="width:30px;height:30px;border-radius:50%;background:var(--primary-lt);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--primary);">'+escapeHtml(name.charAt(0))+'</div>'
+        +'<div style="flex:1;">'
+          +'<div style="font-weight:700;">'+escapeHtml(name)+'</div>'
+          +'<div style="font-size:12px;color:var(--sub);">確定 '+(s.approved_count||0)+'回'+(s.last_date?' · '+String(s.last_date).slice(5,10).replace('-','/'):'')+'</div>'
+        +'</div>'
+        +(unpaid>0?'<span class="sbdg sbdg-red">未払 '+unpaid+'</span>':'')
+      +'</div>';
+    }).join('');
+  }
+  el.innerHTML=html;
+}
+function autoAssignJob(jid){
+  if(!confirm('このジョブの勤務記録があるスタッフを自動登録します（job_id未設定の方のみ）'))return;
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);showLoader(false);
+      if(r.ok){toast('✅ '+r.count+'人を登録しました（参加経験 '+r.total+'人中）');loadAll();}
+      else toast('❌ '+(r.msg||'失敗'));
+    })
+    .withFailureHandler(function(e){toast('❌ '+(e&&e.message||'失敗'));showLoader(false);})
+    .api_autoAssignJobStaff(jid);
+}
+function saveJobRate(jid, sfx){
+  sfx = sfx || '';
+  var wage=document.getElementById('jr-wage'+sfx).value;
+  var trans=document.getElementById('jr-trans'+sfx).value;
+  var w=Number(wage); if(isNaN(w)||w<0){toast('時給は0以上を入力してください');return;}
+  var t=Number(trans); if(isNaN(t)||t<0){toast('交通費は0以上を入力してください');return;}
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);showLoader(false);
+      if(r.ok){toast('✅ 更新しました');}
+      else toast('❌ '+(r.msg||'失敗'));
+    })
+    .withFailureHandler(function(e){toast('❌ '+(e&&e.message||'失敗'));showLoader(false);})
+    .api_updateJob(jid,Number(wage),Number(trans));
+}
+
+function toggleDocsPayGroup(uid,cb){
+  if(cb.checked){if(_docsPay.indexOf(uid)<0)_docsPay.push(uid);}
+  else{_docsPay=_docsPay.filter(function(u){return u!==uid;});}
+}
+function doDocsBulkPay(){
+  if(!_docsPay.length){toast('支払うものを選択してください');return;}
+  var records=[];
+  _docsPay.forEach(function(uid){(_docsPayGroups[uid]||[]).forEach(function(r){records.push(r);});});
+  if(!records.length){toast('支払うものを選択してください');return;}
+  if(!confirm(records.length+'件を支払済みにしますか？'))return;
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);
+      toast('✅ '+r.count+'件を支払済みにしました');
+      showLoader(false);
+      _docsPay=[];_docsPayGroups={};_afterPayRefresh();loadDocsPayList();
+    })
+    .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+    .api_markPaidByKeys(JSON.stringify(records));
+}
+
+// ─── WorkLog 修正 ─────────────────────────
+function openWorkLogEdit(logId,dateStr,jobId,startTime,endTime,transport){
+  document.getElementById('wl-edit-ttl').textContent='勤務記録を修正（'+dateStr+'）';
+  document.getElementById('wl-edit-body').innerHTML=
+    '<input type="hidden" id="wl-edit-log-id" value="'+escapeHtml(logId)+'">'
+    +'<div class="fr"><label class="fl">日付</label><input type="date" id="wl-edit-date" class="fi" value="'+escapeHtml(dateStr)+'"></div>'
+    +'<div class="fr"><label class="fl">職種</label><select id="wl-edit-job" class="fi">'
+      +(_jobs||[]).map(function(j){return'<option value="'+j.job_id+'"'+(j.job_id===jobId?' selected':'')+'>'+escapeHtml(j.title||'')+'</option>';}).join('')
+    +'</select></div>'
+    +'<div style="display:flex;gap:8px;" class="fr">'
+      +'<div style="flex:1;"><label class="fl">開始</label><input type="time" id="wl-edit-start" class="fi" value="'+escapeHtml(startTime||'')+'"></div>'
+      +'<div style="flex:1;"><label class="fl">終了</label><input type="time" id="wl-edit-end" class="fi" value="'+escapeHtml(endTime||'')+'"></div>'
+    +'</div>'
+    +'<div class="fr"><label class="fl">交通費（円）</label><input type="number" id="wl-edit-transport" class="fi" value="'+(transport||0)+'"></div>'
+    +'<div class="mo-actions">'
+      +'<button class="mo-cancel" onclick="closeMo(\'modal-wl-edit\')">キャンセル</button>'
+      +'<button class="mo-ok" onclick="submitWorkLogCorrection()">修正を保存</button>'
+    +'</div>';
+  openMo('modal-wl-edit');
+}
+function submitWorkLogCorrection(){
+  var logId=document.getElementById('wl-edit-log-id').value;
+  var data={
+    date:       document.getElementById('wl-edit-date').value,
+    job_id:     document.getElementById('wl-edit-job').value,
+    start_time: document.getElementById('wl-edit-start').value,
+    end_time:   document.getElementById('wl-edit-end').value,
+    transport:  Number(document.getElementById('wl-edit-transport').value)||0
+  };
+  if(!data.date||!data.job_id){toast('日付と職種は必須です');return;}
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);
+      toast(r.ok?'✅ 修正を保存しました':'❌ '+(r.msg||'エラー'));
+      closeMo('modal-wl-edit');
+      if(r.ok&&_curStaff){showLoader(false);_reloadStaffDetail(_curStaff.line_user_id);}
+      else showLoader(false);
+    })
+    .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+    .api_addWorkLogCorrection(logId, JSON.stringify(data));
+}
+function deleteWorkLog(logId,dateStr){
+  if(!confirm(dateStr+' の勤務記録を削除しますか？'))return;
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);
+      toast(r.ok?'✅ 削除しました':'❌ '+(r.msg||'エラー'));
+      if(r.ok&&_curStaff){showLoader(false);_reloadStaffDetail(_curStaff.line_user_id);}
+      else showLoader(false);
+    })
+    .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+    .api_addWorkLogCorrection(logId, JSON.stringify({action:'deleted'}));
+}
+
+// ─── WorkLog 手動追記 ─────────────────────
+function openWorkLogAdd(){
+  if(!_curStaff)return;
+  var uid=_curStaff.line_user_id;
+  document.getElementById('wl-add-body').innerHTML=
+    '<div style="font-size:15px;font-weight:700;color:var(--sub);margin-bottom:12px;">対象: '+escapeHtml(_curStaff.name||_curStaff.display_name||uid)+'</div>'
+    +'<div class="fr"><label class="fl">日付</label><input type="date" id="wl-add-date" class="fi" value="'+today()+'"></div>'
+    +'<div class="fr"><label class="fl">職種</label><select id="wl-add-job" class="fi" onchange="updateWlAddJob(this.value)">'
+      +(_jobs||[]).map(function(j){return'<option value="'+j.job_id+'">'+escapeHtml(j.title||'')+'</option>';}).join('')
+    +'</select></div>'
+    +'<div id="wl-add-job-info" style="display:none;background:var(--bg);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:14px;color:var(--sub);gap:16px;align-items:center;"></div>'
+    +'<div style="display:flex;gap:8px;" class="fr">'
+      +'<div style="flex:1;"><label class="fl">開始</label><input type="time" id="wl-add-start" class="fi"></div>'
+      +'<div style="flex:1;"><label class="fl">終了</label><input type="time" id="wl-add-end" class="fi"></div>'
+    +'</div>'
+    +'<div class="fr"><label class="fl">交通費（円）</label><input type="number" id="wl-add-transport" class="fi" value="0"></div>'
+    +'<div class="mo-actions">'
+      +'<button class="mo-cancel" onclick="closeMo(\'modal-wl-add\')">キャンセル</button>'
+      +'<button class="mo-ok" onclick="submitWorkLogManual(\''+uid+'\')">追記する</button>'
+    +'</div>';
+  openMo('modal-wl-add');
+  // 初期職種を自動入力
+  var firstJobId=(_jobs&&_jobs.length)?_jobs[0].job_id:'';
+  if(firstJobId)updateWlAddJob(firstJobId);
+}
+
+function updateWlAddJob(jobId){
+  var j=(_jobs||[]).find(function(x){return x.job_id===jobId;})||{};
+  // 時間自動入力
+  if(j.start_time){var s=document.getElementById('wl-add-start');if(s)s.value=j.start_time;}
+  if(j.end_time){var e=document.getElementById('wl-add-end');if(e)e.value=j.end_time;}
+  var tr=Number(j.transport||0);
+  var ti=document.getElementById('wl-add-transport');if(ti)ti.value=tr;
+  // 職種情報バー
+  var info=document.getElementById('wl-add-job-info');
+  if(info){
+    var wage=Number(j.hourly_wage||j.wage||0);
+    var parts=[];
+    if(wage)parts.push('<span>時給 <strong style="color:var(--primary-dk);">¥'+wage.toLocaleString()+'</strong></span>');
+    if(j.start_time&&j.end_time)parts.push('<span>勤務 <strong style="color:var(--primary-dk);">'+escapeHtml(j.start_time)+'〜'+escapeHtml(j.end_time)+'</strong></span>');
+    if(tr)parts.push('<span>交通費 <strong style="color:var(--primary-dk);">¥'+tr.toLocaleString()+'</strong></span>');
+    info.innerHTML=parts.join('<span style="color:#ccc;">｜</span>');
+    info.style.display=parts.length?'flex':'none';
+  }
+}
+function submitWorkLogManual(userId){
+  var date=document.getElementById('wl-add-date').value;
+  var jobId=document.getElementById('wl-add-job').value;
+  var startTime=document.getElementById('wl-add-start').value;
+  var endTime=document.getElementById('wl-add-end').value;
+  var transport=Number(document.getElementById('wl-add-transport').value)||0;
+  if(!date||!jobId||!startTime||!endTime){toast('日付・職種・時間は必須です');return;}
+  if(startTime && endTime && startTime >= endTime){toast('終了時刻は開始時刻より後にしてください');return;}
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);
+      toast(r.ok?'✅ 追記しました':'❌ '+(r.msg||'エラー'));
+      closeMo('modal-wl-add');
+      if(r.ok&&_curStaff){showLoader(false);_reloadStaffDetail(_curStaff.line_user_id);_refreshShiftsOnly();}
+      else showLoader(false);
+    })
+    .withFailureHandler(function(e){toast('❌ '+e.message);showLoader(false);})
+    .api_addWorkLogManual(userId, date, jobId, startTime, endTime, transport);
+}
+
+// ─── Docs ─────────────────────────────────
+function sendBroadcast(){
+  var text=document.getElementById('broadcast-text').value;
+  if(!text.trim()){toast('メッセージを入力してください');return;}
+  if(!confirm('全スタッフに送信しますか？'))return;
+  var res=document.getElementById('broadcast-result');
+  res.textContent='送信中...';res.style.color='var(--sub)';
+  showLoader(true);
+  google.script.run
+    .withSuccessHandler(function(j){
+      showLoader(false);
+      var r=JSON.parse(j);
+      res.textContent=r.ok?'✅ '+r.count+'名に送信しました':'❌ '+r.msg;
+      res.style.color=r.ok?'var(--primary)':'var(--danger)';
+    })
+    .withFailureHandler(function(e){
+      showLoader(false);
+      res.textContent='❌ '+(e&&e.message||'送信失敗');
+      res.style.color='var(--danger)';
+    })
+    .api_broadcastToAll(text);
+}
+// ─── データバックアップ ────────────────────
+function doBackup(){
+  showLoader(true);
+  document.getElementById('backup-result').textContent='';
+  google.script.run
+    .withSuccessHandler(function(j){
+      showLoader(false);
+      var r=JSON.parse(j);
+      if(r.ok){
+        document.getElementById('backup-result').innerHTML=
+          '✅ <a href="'+r.url+'" target="_blank" style="color:var(--primary);">バックアップを開く</a>';
+        toast('バックアップ完了');
+      }else{
+        document.getElementById('backup-result').textContent='❌ '+r.msg;
+        toast('バックアップ失敗');
+      }
+    })
+    .withFailureHandler(function(e){
+      showLoader(false);
+      document.getElementById('backup-result').textContent='❌ '+(e&&e.message||'バックアップ失敗');
+      toast('バックアップ失敗');
+    })
+    .api_backupAllData();
+}
+// ─── QRチェックイン設定 ─────────────────────
+function loadQrCheckinSetting(){
+  google.script.run
+    .withSuccessHandler(function(j){
+      var r=JSON.parse(j);
+      document.getElementById('qr-checkin-toggle').checked=r.enabled;
+      document.getElementById('qr-toggle-result').textContent=r.enabled?'現在：有効':'現在：無効';
+    })
+    .withFailureHandler(function(){
+      document.getElementById('qr-toggle-result').textContent='読込失敗';
+    })
+    .api_getQrCheckinEnabled();
+}
+function setQrCheckinEnabled(enabled){
+  var res=document.getElementById('qr-toggle-result');
+  res.textContent='保存中...';
+  google.script.run
+    .withSuccessHandler(function(){
+      res.textContent=enabled?'現在：有効':'現在：無効';
+      toast(enabled?'QRチェックインを有効にしました':'QRチェックインを無効にしました');
+    })
+    .withFailureHandler(function(e){
+      res.textContent='❌ 保存失敗';
+      document.getElementById('qr-checkin-toggle').checked=!enabled;
+    })
+    .api_setQrCheckinEnabled(enabled);
+}
+</script>
+</body>
+</html>

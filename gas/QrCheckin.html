@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>チェックイン</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Hiragino Sans',sans-serif;background:#f0f4f8;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.card{background:#fff;border-radius:20px;padding:32px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.1);}
+.company{font-size:13px;color:#888;margin-bottom:8px;}
+.name{font-size:26px;font-weight:800;color:#1a1a2e;margin-bottom:4px;}
+.clock{font-size:38px;font-weight:700;color:#333;letter-spacing:2px;margin:12px 0;}
+.status{font-size:13px;color:#888;margin-bottom:20px;min-height:20px;}
+.btn{display:block;width:100%;padding:18px;font-size:18px;font-weight:700;border:none;border-radius:14px;cursor:pointer;transition:opacity .1s;margin-bottom:10px;}
+.btn:active{opacity:.75;}
+.btn:disabled{opacity:.35;cursor:default;}
+.btn-in{background:#1a73e8;color:#fff;}
+.btn-out{background:#34a853;color:#fff;}
+.btn-done{background:#e8eaf6;color:#5c6bc0;}
+.receipt{background:#f8fff9;border:2px solid #34a853;border-radius:14px;padding:20px;margin-top:16px;text-align:left;}
+.receipt h3{font-size:16px;color:#1b5e20;margin-bottom:14px;text-align:center;}
+.receipt-row{display:flex;justify-content:space-between;font-size:14px;padding:5px 0;border-bottom:1px solid #e8f5e9;}
+.receipt-row:last-child{border-bottom:none;}
+.receipt-total{font-size:20px;font-weight:800;color:#1b5e20;text-align:center;margin-top:14px;padding-top:12px;border-top:2px solid #34a853;}
+.btn-receipt{background:#34a853;color:#fff;width:100%;padding:16px;font-size:16px;font-weight:700;border:none;border-radius:12px;margin-top:14px;cursor:pointer;}
+.btn-receipt:disabled{opacity:.5;}
+#msg{font-size:15px;margin-top:12px;min-height:22px;color:#666;}
+.done-mark{font-size:48px;margin:8px 0;}
+#loading{color:#888;font-size:15px;padding:20px;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="company"><?= company ?></div>
+  <div id="loading">読み込み中...</div>
+  <div id="main" style="display:none">
+    <div class="name" id="staff-name"></div>
+    <div class="clock" id="clock">--:--</div>
+    <div class="status" id="status-text"></div>
+    <button class="btn btn-in"  id="btn-in"  onclick="doCheckin()"  style="display:none">出勤チェックイン</button>
+    <button class="btn btn-out" id="btn-out" onclick="doCheckout()" style="display:none">退勤チェックアウト</button>
+    <button class="btn btn-done" id="btn-done" style="display:none" disabled>本日の勤務完了</button>
+    <div id="receipt-area"></div>
+    <div id="msg"></div>
+  </div>
+</div>
+
+<script>
+var UID = '<?= uid ?>';
+var _status = null;
+
+function pad(n){return String(n).padStart(2,'0');}
+function updateClock(){
+  var d=new Date();
+  document.getElementById('clock').textContent=pad(d.getHours())+':'+pad(d.getMinutes());
+}
+updateClock();setInterval(updateClock,15000);
+
+// 初期ロード
+window.addEventListener('load',function(){
+  if(!UID){
+    document.getElementById('loading').textContent='QRコードが無効です。管理者にお問い合わせください。';
+    return;
+  }
+  google.script.run
+    .withSuccessHandler(function(json){
+      var r=JSON.parse(json);
+      if(r.disabled){
+        document.getElementById('loading').textContent='チェックイン機能は現在停止中です。';
+        return;
+      }
+      document.getElementById('loading').style.display='none';
+      document.getElementById('main').style.display='block';
+      document.getElementById('staff-name').textContent=r.name||'スタッフ';
+      _status=r.status;
+      updateUI(r);
+    })
+    .withFailureHandler(function(err){
+      document.getElementById('loading').textContent='エラー: '+err.message;
+    })
+    .api_getQrStatus(UID);
+});
+
+function updateUI(r){
+  var btnIn=document.getElementById('btn-in');
+  var btnOut=document.getElementById('btn-out');
+  var btnDone=document.getElementById('btn-done');
+  var stTxt=document.getElementById('status-text');
+  btnIn.style.display='none';
+  btnOut.style.display='none';
+  btnDone.style.display='none';
+  if(r.status==='none'){
+    stTxt.textContent='本日の記録なし';
+    btnIn.style.display='block';
+  } else if(r.status==='checkin'){
+    stTxt.textContent='チェックイン済み ⏰ '+r.checkin_time;
+    btnOut.style.display='block';
+  } else if(r.status==='checkout'){
+    stTxt.textContent='本日の勤務完了 ✅';
+    btnDone.style.display='block';
+  }
+}
+
+function doCheckin(){
+  var btn=document.getElementById('btn-in');
+  btn.disabled=true;
+  btn.textContent='処理中...';
+  google.script.run
+    .withSuccessHandler(function(json){
+      var r=JSON.parse(json);
+      btn.disabled=false;
+      btn.textContent='出勤チェックイン';
+      if(r.ok){
+        document.getElementById('status-text').textContent='チェックイン完了 ⏰ '+r.time;
+        document.getElementById('btn-in').style.display='none';
+        document.getElementById('btn-out').style.display='block';
+        document.getElementById('msg').textContent='おはようございます！よろしくお願いします 🙏';
+      } else {
+        document.getElementById('msg').textContent=r.msg||'エラーが発生しました';
+      }
+    })
+    .withFailureHandler(function(err){
+      btn.disabled=false;btn.textContent='出勤チェックイン';
+      document.getElementById('msg').textContent='エラー: '+err.message;
+    })
+    .api_processQrCheckin(UID,'checkin');
+}
+
+function doCheckout(){
+  if(!confirm('本当に退勤しますか？')){ return; }
+  var btn=document.getElementById('btn-out');
+  btn.disabled=true;
+  btn.textContent='処理中...';
+  google.script.run
+    .withSuccessHandler(function(json){
+      var r=JSON.parse(json);
+      btn.disabled=false;
+      if(r.ok){
+        document.getElementById('btn-out').style.display='none';
+        document.getElementById('status-text').textContent='退勤完了 ✅';
+        showReceipt(r);
+      } else {
+        btn.textContent='退勤チェックアウト';
+        document.getElementById('msg').textContent=r.msg||'エラーが発生しました';
+      }
+    })
+    .withFailureHandler(function(err){
+      btn.disabled=false;btn.textContent='退勤チェックアウト';
+      document.getElementById('msg').textContent='エラー: '+err.message;
+    })
+    .api_processQrCheckin(UID,'checkout');
+}
+
+function showReceipt(r){
+  var area=document.getElementById('receipt-area');
+  area.innerHTML=
+    '<div class="receipt">'
+    +'<h3>本日の勤務明細</h3>'
+    +'<div class="receipt-row"><span>勤務時間</span><span>'+r.start_time+' 〜 '+r.end_time+'</span></div>'
+    +'<div class="receipt-row"><span>実働</span><span>'+r.actual_hours+'時間</span></div>'
+    +'<div class="receipt-row"><span>日当</span><span>¥'+Number(r.wage).toLocaleString()+'</span></div>'
+    +'<div class="receipt-row"><span>交通費</span><span>¥'+Number(r.transport).toLocaleString()+'</span></div>'
+    +'<div class="receipt-row"><span>源泉徴収</span><span>-¥'+Number(r.withholding).toLocaleString()+'</span></div>'
+    +'<div class="receipt-total">手取り ¥'+Number(r.net_pay).toLocaleString()+'</div>'
+    +'<button class="btn-receipt" id="btn-receipt" onclick="confirmReceipt()">✅ 領収しました</button>'
+    +'</div>';
+}
+
+function confirmReceipt(){
+  var btn=document.getElementById('btn-receipt');
+  btn.disabled=true;
+  btn.textContent='確認中...';
+  google.script.run
+    .withSuccessHandler(function(){
+      document.getElementById('receipt-area').innerHTML=
+        '<div class="done-mark">🙏</div>'
+        +'<div style="font-size:16px;font-weight:700;color:#1b5e20;">領収確認しました<br>おつかれさまでした！</div>';
+    })
+    .withFailureHandler(function(){
+      btn.disabled=false;btn.textContent='✅ 領収しました';
+    })
+    .api_confirmReceipt(UID);
+}
+</script>
+</body>
+</html>

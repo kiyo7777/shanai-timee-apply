@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>社内タイミー</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0b0f1a;
+  --card:#111827;
+  --card2:#1a2133;
+  --accent:#f97316;
+  --text:#e8eaf0;
+  --sub:#6b7a99;
+  --border:#1e2a3a;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);}
+body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;max-width:430px;margin:0 auto;display:flex;flex-direction:column;}
+
+/* ── Header ── */
+.hdr{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg);position:sticky;top:0;z-index:30;flex-shrink:0;}
+.hdr-icon{width:38px;height:38px;background:#b46520;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0;}
+.hdr-title{flex:1;line-height:1.25;}
+.hdr-title b{font-size:14px;font-weight:700;display:block;}
+.hdr-title span{font-size:11px;color:var(--sub);}
+.bell{position:relative;background:none;border:none;font-size:22px;cursor:pointer;padding:4px;color:#ccd;}
+.bell-badge{position:absolute;top:0;right:0;background:var(--accent);color:#fff;font-size:10px;font-weight:700;border-radius:99px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px;}
+
+/* ── Page layout ── */
+.page{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.page.hidden{display:none!important;}
+
+/* ── Hero ── */
+.hero{background:linear-gradient(140deg,#1a2540 0%,#0d1520 100%);padding:22px 16px 18px;flex-shrink:0;}
+.hero h1{font-size:26px;font-weight:900;color:#fff;margin-bottom:5px;}
+.hero p{font-size:13px;color:#7a90bb;}
+
+/* ── Filters ── */
+.filters{display:flex;gap:8px;padding:14px 16px;overflow-x:auto;scrollbar-width:none;background:var(--bg);flex-shrink:0;}
+.filters::-webkit-scrollbar{display:none;}
+.ftab{padding:7px 18px;border-radius:99px;border:none;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;background:var(--card2);color:#99a;transition:all .15s;}
+.ftab.on{background:var(--accent);color:#fff;}
+
+/* ── Job list ── */
+.list{flex:1;overflow-y:auto;padding:4px 16px 84px;display:flex;flex-direction:column;gap:12px;}
+
+.card{background:var(--card);border-radius:16px;padding:16px;position:relative;overflow:hidden;cursor:pointer;transition:opacity .1s;}
+.card:active{opacity:.85;}
+
+.card-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:13px;}
+.jicon{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.jmeta{flex:1;}
+.jname{font-size:16px;font-weight:700;color:#fff;margin-bottom:3px;}
+.jloc{font-size:12px;color:var(--sub);}
+.star-btn{background:none;border:none;font-size:20px;cursor:pointer;padding:2px;line-height:1;transition:transform .1s;}
+.star-btn:active{transform:scale(1.3);}
+
+.urgent-badge{position:absolute;top:14px;right:14px;background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;}
+
+.card-mid{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:11px;}
+.date-time .jdate{font-size:13px;color:var(--accent);font-weight:600;margin-bottom:2px;}
+.date-time .jtime{font-size:16px;font-weight:700;color:#fff;}
+.jdist{text-align:right;}
+.jdist .dlabel{font-size:11px;color:var(--sub);margin-bottom:2px;}
+.jdist .dval{font-size:14px;font-weight:700;color:#ccd;}
+
+.card-bot{display:flex;align-items:flex-end;justify-content:space-between;}
+.pay-wrap .pay-sub{font-size:11px;color:var(--sub);margin-bottom:2px;}
+.pay-wrap .pay-main{font-size:24px;font-weight:900;color:#fff;}
+.pay-wrap .pay-main small{font-size:15px;font-weight:700;}
+.apply-btn{padding:9px 14px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s;}
+.apply-btn.open{background:var(--accent);color:#fff;}
+.apply-btn.full{background:var(--card2);color:var(--sub);}
+
+/* ── マイシフト ── */
+.ms-hdr{padding:22px 16px 14px;font-size:24px;font-weight:900;color:#fff;flex-shrink:0;}
+.ms-tabs-wrap{padding:0 16px 12px;flex-shrink:0;}
+.ms-tabs{display:flex;background:var(--card);border-radius:12px;padding:4px;gap:4px;}
+.ms-tab{flex:1;padding:9px;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--sub);transition:all .15s;}
+.ms-tab.on{background:var(--card2);color:#fff;}
+
+.ms-list{flex:1;overflow-y:auto;padding:0 16px 84px;display:flex;flex-direction:column;gap:12px;}
+
+/* シフトカード */
+.sc{background:var(--card);border-radius:16px;overflow:hidden;}
+.sc.today{border-left:3px solid var(--accent);}
+.sc-today-banner{background:rgba(249,115,22,.13);padding:9px 14px;font-size:12px;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:6px;}
+.sc-today-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);}
+.sc-body{padding:14px 14px 12px;}
+.sc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.sc-date-row{display:flex;align-items:baseline;gap:8px;}
+.sc-date{font-size:14px;font-weight:700;color:#ccd;}
+.sc-time{font-size:12px;color:var(--sub);}
+.sc-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;}
+.sc-badge.working{background:var(--accent);color:#fff;}
+.sc-badge.approved{background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3);}
+.sc-badge.applied{background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);}
+.sc-badge.done{background:var(--card2);color:var(--sub);}
+.sc-mid{display:flex;align-items:center;justify-content:space-between;}
+.sc-job{display:flex;align-items:center;gap:10px;}
+.sc-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.sc-title{font-size:15px;font-weight:700;color:#fff;}
+.sc-loc{font-size:12px;color:var(--sub);margin-top:2px;}
+.sc-wage{font-size:18px;font-weight:800;color:#fff;}
+.sc-foot{margin-top:11px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--sub);display:flex;align-items:center;gap:6px;}
+.sc-foot-arr{color:#2a3450;}
+
+/* ── Bottom nav ── */
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--card);border-top:1px solid var(--border);display:flex;z-index:30;}
+.ntab{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 4px 16px;border:none;background:none;color:var(--sub);font-size:10px;cursor:pointer;gap:3px;transition:color .15s;}
+.ntab.on{color:var(--accent);}
+.nicon{font-size:20px;line-height:1;}
+
+/* ── Empty state ── */
+.empty{text-align:center;padding:60px 16px;color:var(--sub);}
+.empty .eico{font-size:48px;margin-bottom:12px;}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-icon">社</div>
+  <div class="hdr-title">
+    <b>地涌の温泉社内タイミー</b>
+    <span>スタッフ用</span>
+  </div>
+  <button class="bell" onclick="alert('通知機能は未実装です')">
+    🔔<span class="bell-badge" id="badge">2</span>
+  </button>
+</header>
+
+<!-- さがすページ -->
+<div id="page-search" class="page">
+  <div class="hero">
+    <h1>お仕事を探す</h1>
+    <p id="hero-sub">熊本市周辺・読み込み中…</p>
+  </div>
+  <div class="filters">
+    <button class="ftab on" data-f="all"    onclick="setFilter(this)">すべて</button>
+    <button class="ftab"    data-f="kyubo"  onclick="setFilter(this)">急募 🔥</button>
+    <button class="ftab"    data-f="high"   onclick="setFilter(this)">高時給</button>
+    <button class="ftab"    data-f="fav"    onclick="setFilter(this)">お気に入り ★</button>
+  </div>
+  <div class="list" id="list"></div>
+</div>
+
+<!-- マイシフトページ -->
+<div id="page-myshift" class="page hidden">
+  <div class="ms-hdr">マイシフト</div>
+  <div class="ms-tabs-wrap">
+    <div class="ms-tabs">
+      <button class="ms-tab on" data-ms="upcoming" onclick="setShiftTab('upcoming',this)">これから（3）</button>
+      <button class="ms-tab"    data-ms="past"     onclick="setShiftTab('past',this)">過去（3）</button>
+    </div>
+  </div>
+  <div class="ms-list" id="ms-list"></div>
+</div>
+
+<!-- その他ページ（スタブ） -->
+<div id="page-cal"  class="page hidden"><div class="empty"><div class="eico">⊞</div>カレンダーは準備中です</div></div>
+<div id="page-pay"  class="page hidden"><div class="empty"><div class="eico">¥</div>給与明細は準備中です</div></div>
+<div id="page-my"   class="page hidden"><div class="empty"><div class="eico">人</div>マイページは準備中です</div></div>
+
+<nav class="nav">
+  <button class="ntab on"  data-tab="search" ><div class="nicon">⊙</div>さがす</button>
+  <button class="ntab"     data-tab="myshift"><div class="nicon">◎</div>マイシフト</button>
+  <button class="ntab"     data-tab="cal"    ><div class="nicon">⊞</div>カレンダー</button>
+  <button class="ntab"     data-tab="pay"    ><div class="nicon">¥</div>給与</button>
+  <button class="ntab"     data-tab="my"     ><div class="nicon">人</div>マイ</button>
+</nav>
+
+<script>
+var DOW = ['日','月','火','水','木','金','土'];
+
+/* ────────── さがす データ ────────── */
+var JOBS = [
+  {
+    id:'JOB001', title:'フロント受付', loc:'阿蘇の湯・熊本市中央区',
+    icon:{bg:'#2d1a08',char:'♨️',color:'#f97316'},
+    date:'2026-04-22', start:'09:00', end:'13:00',
+    wage:3300, hourly:825, dist:2.1,
+    applied:3, cap:1, urgent:false
+  },
+  {
+    id:'JOB002', title:'深夜受付', loc:'FIT菊池・菊池市',
+    icon:{bg:'#12122a',char:'⚡',color:'#facc15'},
+    date:'2026-04-22', start:'22:00', end:'02:00',
+    wage:4400, hourly:1100, dist:5.8,
+    applied:0, cap:1, urgent:true
+  },
+  {
+    id:'JOB003', title:'巡回・清掃', loc:'らんどり熊本・熊本市東区',
+    icon:{bg:'#0a2018',char:'洗',color:'#34d399'},
+    date:'2026-04-23', start:'14:00', end:'18:00',
+    wage:3200, hourly:800, dist:3.4,
+    applied:1, cap:2, urgent:false
+  },
+  {
+    id:'JOB004', title:'温泉フロント', loc:'地涌の湯・熊本市西区',
+    icon:{bg:'#2d1a08',char:'♨️',color:'#f97316'},
+    date:'2026-04-24', start:'10:00', end:'15:00',
+    wage:4125, hourly:825, dist:1.2,
+    applied:0, cap:2, urgent:false
+  },
+  {
+    id:'JOB005', title:'設備点検補助', loc:'地涌の湯・熊本市西区',
+    icon:{bg:'#1a1a2a',char:'🔧',color:'#94a3b8'},
+    date:'2026-04-25', start:'08:00', end:'12:00',
+    wage:3600, hourly:900, dist:1.2,
+    applied:2, cap:2, urgent:true
+  }
+];
+
+/* ────────── マイシフト データ ────────── */
+var MY_SHIFTS = {
+  upcoming: [
+    {
+      id:'S001', date:'4/20（月）', start:'09:00', end:'13:00',
+      title:'フロント受付', loc:'阿蘇の湯',
+      icon:{bg:'#2d1a08',char:'♨️',color:'#f97316'},
+      wage:3300, status:'working',
+      isToday:true, checkIn:'08:58',
+      logDate:'4/20 08:58', logEvent:'出勤'
+    },
+    {
+      id:'S002', date:'4/24（金）', start:'15:00', end:'20:00',
+      title:'受付', loc:'FIT菊池',
+      icon:{bg:'#12122a',char:'⚡',color:'#facc15'},
+      wage:3300, status:'approved',
+      logDate:'4/18 20:30', logEvent:'確定'
+    },
+    {
+      id:'S003', date:'4/26（日）', start:'18:00', end:'22:00',
+      title:'夜番', loc:'阿蘇の湯',
+      icon:{bg:'#2d1a08',char:'♨️',color:'#f97316'},
+      wage:3800, status:'applied',
+      logDate:'4/20 07:30', logEvent:'応募'
+    }
+  ],
+  past: [
+    {
+      id:'P001', date:'4/13（日）', start:'09:00', end:'13:00',
+      title:'フロント受付', loc:'阿蘇の湯',
+      icon:{bg:'#2d1a08',char:'♨️',color:'#f97316'},
+      wage:3300, status:'done',
+      logDate:'4/13 13:02', logEvent:'退勤'
+    },
+    {
+      id:'P002', date:'4/10（木）', start:'14:00', end:'18:00',
+      title:'巡回・清掃', loc:'らんどり熊本',
+      icon:{bg:'#0a2018',char:'洗',color:'#34d399'},
+      wage:3200, status:'done',
+      logDate:'4/10 18:05', logEvent:'退勤'
+    },
+    {
+      id:'P003', date:'4/7（火）', start:'22:00', end:'02:00',
+      title:'深夜受付', loc:'FIT菊池',
+      icon:{bg:'#12122a',char:'⚡',color:'#facc15'},
+      wage:4400, status:'done',
+      logDate:'4/8 02:10', logEvent:'退勤'
+    }
+  ]
+};
+
+var _filter = 'all';
+var _favs = {};
+var _shiftTab = 'upcoming';
+var _curPage = 'search';
+try { _favs = JSON.parse(localStorage.getItem('timee_favs')||'{}'); } catch(e){}
+
+function saveFavs(){ try{localStorage.setItem('timee_favs',JSON.stringify(_favs));}catch(e){} }
+
+function fmtDate(s){
+  var p=s.split('-').map(Number);
+  var d=new Date(p[0],p[1]-1,p[2]);
+  return (d.getMonth()+1)+'/'+d.getDate()+'（'+DOW[d.getDay()]+'）';
+}
+
+/* ── ページ切り替え ── */
+function showPage(id){
+  ['search','myshift','cal','pay','my'].forEach(function(p){
+    var el = document.getElementById('page-'+p);
+    if(el) el.classList.toggle('hidden', p!==id);
+  });
+  _curPage = id;
+}
+
+/* ── さがすフィルタ ── */
+function setFilter(btn){
+  document.querySelectorAll('.ftab').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  _filter = btn.dataset.f;
+  renderJobs();
+}
+
+function toggleFav(id, e){
+  e.stopPropagation();
+  _favs[id] = !_favs[id];
+  saveFavs();
+  renderJobs();
+}
+
+function doApply(id, e){
+  e.stopPropagation();
+  var j = JOBS.find(function(x){return x.id===id;});
+  if(!j) return;
+  if(j.applied >= j.cap){ alert('この募集は満員です'); return; }
+  if(confirm(j.title+'\n'+fmtDate(j.date)+' '+j.start+'〜'+j.end+'\n\n応募しますか？')){
+    j.applied++;
+    renderJobs();
+  }
+}
+
+function renderJobs(){
+  var jobs = JOBS.slice();
+  if(_filter==='kyubo') jobs=jobs.filter(function(j){return j.urgent;});
+  if(_filter==='high')  jobs=jobs.slice().sort(function(a,b){return b.hourly-a.hourly;});
+  if(_filter==='fav')   jobs=jobs.filter(function(j){return !!_favs[j.id];});
+
+  document.getElementById('hero-sub').textContent =
+    '熊本市周辺・'+jobs.length+'件の募集';
+
+  var el = document.getElementById('list');
+  if(!jobs.length){
+    el.innerHTML='<div class="empty"><div class="eico">🔍</div>該当するシフトがありません</div>';
+    return;
+  }
+
+  el.innerHTML = jobs.map(function(j){
+    var fav = !!_favs[j.id];
+    var open = j.applied < j.cap;
+    return '<div class="card" onclick="">'
+      +(j.urgent?'<div class="urgent-badge">急募</div>':'')
+      +'<div class="card-top">'
+        +'<div class="jicon" style="background:'+j.icon.bg+';color:'+j.icon.color+'">'+j.icon.char+'</div>'
+        +'<div class="jmeta">'
+          +'<div class="jname">'+j.title+'</div>'
+          +'<div class="jloc">'+j.loc+'</div>'
+        +'</div>'
+        +'<button class="star-btn" onclick="toggleFav(\''+j.id+'\',event)" style="color:'+(fav?'#f97316':'#2a3450')+'" title="お気に入り">★</button>'
+      +'</div>'
+      +'<div class="card-mid">'
+        +'<div class="date-time">'
+          +'<div class="jdate">'+fmtDate(j.date)+'</div>'
+          +'<div class="jtime">'+j.start+'–'+j.end+'</div>'
+        +'</div>'
+        +'<div class="jdist"><div class="dlabel">距離</div><div class="dval">'+j.dist+'km</div></div>'
+      +'</div>'
+      +'<div class="card-bot">'
+        +'<div class="pay-wrap">'
+          +'<div class="pay-sub">日給（時給換算¥'+j.hourly.toLocaleString()+'）</div>'
+          +'<div class="pay-main"><small>¥</small>'+j.wage.toLocaleString()+'</div>'
+        +'</div>'
+        +'<button class="apply-btn '+(open?'open':'full')+'" onclick="doApply(\''+j.id+'\',event)">'
+          +j.applied+'/'+j.cap+'&nbsp;応募'
+        +'</button>'
+      +'</div>'
+    +'</div>';
+  }).join('');
+}
+
+/* ── マイシフト タブ ── */
+function setShiftTab(tab, btn){
+  document.querySelectorAll('.ms-tab').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  _shiftTab = tab;
+  renderMyShift();
+}
+
+function badgeHtml(status){
+  var map = {
+    working: ['出勤中','working'],
+    approved:['● 確定','approved'],
+    applied: ['● 応募中','applied'],
+    done:    ['退勤済','done']
+  };
+  var info = map[status] || ['','done'];
+  return '<span class="sc-badge '+info[1]+'">'+info[0]+'</span>';
+}
+
+function renderMyShift(){
+  var el = document.getElementById('ms-list');
+  var shifts = MY_SHIFTS[_shiftTab] || [];
+  if(!shifts.length){
+    el.innerHTML='<div class="empty"><div class="eico">📋</div>シフトがありません</div>';
+    return;
+  }
+  el.innerHTML = shifts.map(function(s){
+    var todayBanner = s.isToday
+      ? '<div class="sc-today-banner"><div class="sc-today-dot"></div>本日・出勤中 '+s.checkIn+'〜</div>'
+      : '';
+    return '<div class="sc'+(s.isToday?' today':'')+'">'+
+      todayBanner+
+      '<div class="sc-body">'+
+        '<div class="sc-top">'+
+          '<div class="sc-date-row">'+
+            '<span class="sc-date">'+s.date+'</span>'+
+            '<span class="sc-time">'+s.start+'–'+s.end+'</span>'+
+          '</div>'+
+          badgeHtml(s.status)+
+        '</div>'+
+        '<div class="sc-mid">'+
+          '<div class="sc-job">'+
+            '<div class="sc-icon" style="background:'+s.icon.bg+';color:'+s.icon.color+'">'+s.icon.char+'</div>'+
+            '<div>'+
+              '<div class="sc-title">'+s.title+'</div>'+
+              '<div class="sc-loc">'+s.loc+'</div>'+
+            '</div>'+
+          '</div>'+
+          '<div class="sc-wage">¥'+s.wage.toLocaleString()+'</div>'+
+        '</div>'+
+        '<div class="sc-foot">'+
+          s.logDate+' <span class="sc-foot-arr">→</span> '+s.logEvent+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+/* ── ナビ切り替え ── */
+document.querySelectorAll('.ntab').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.ntab').forEach(function(b){b.classList.remove('on');});
+    btn.classList.add('on');
+    var tab = btn.dataset.tab;
+    showPage(tab);
+    if(tab === 'myshift') renderMyShift();
+  });
+});
+
+renderJobs();
+</script>
+</body>
+</html>

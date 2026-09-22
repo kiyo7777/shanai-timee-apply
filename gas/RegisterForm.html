@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>プロフィール登録・更新</title>
+<style>
+:root{--primary:#1a73e8;--primary-d:#1557b0;--bg:#eef2f8;--line:#e3e8f0;}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;
+  background:var(--bg);color:#1f2733;
+  display:flex;flex-direction:column;
+  min-height:100dvh;
+  padding:12px 10px max(env(safe-area-inset-bottom,0px),16px) 10px;
+  padding-top:max(env(safe-area-inset-top,0px),12px);
+  -webkit-text-size-adjust:100%;
+}
+.card{
+  background:#fff;border-radius:20px;
+  box-shadow:0 2px 16px rgba(20,40,80,.08);
+  padding:22px 18px;width:100%;max-width:480px;
+  margin:0;
+  display:flex;flex-direction:column;
+  flex:1;
+}
+h1{font-size:20px;font-weight:800;color:var(--primary);margin-bottom:3px;}
+.sub{color:#7a869a;font-size:13px;line-height:1.4;margin-bottom:18px;}
+.field{margin-bottom:14px;}
+label{font-size:15px;font-weight:700;display:block;margin-bottom:7px;color:#2a3340;}
+.req{color:#ea4335;margin-left:2px;}
+.opt{color:#7a869a;font-size:11px;font-weight:600;margin-left:6px;background:#f0f3f7;border-radius:4px;padding:1px 6px;}
+input[type=text],input[type=tel],input[type=date]{
+  width:100%;padding:13px 14px;
+  border:1.5px solid var(--line);border-radius:12px;
+  font-size:16px;outline:none;color:#1f2733;background:#fff;
+  -webkit-appearance:none;
+}
+input:focus{border-color:var(--primary);background:#f5f9ff;}
+.zip-row{display:flex;gap:8px;}
+.zip-row input:first-child{width:130px;flex-shrink:0;}
+.zip-row input:last-child{flex:1;}
+.field-hint{font-size:12px;color:#9aa5b4;margin-top:5px;}
+.error{color:#d93025;font-size:13px;font-weight:600;margin-top:5px;display:none;}
+.spacer{flex:1;min-height:8px;}
+.btn{
+  display:block;width:100%;padding:17px;
+  background:var(--primary);color:#fff;
+  border:none;border-radius:14px;
+  font-size:18px;font-weight:800;cursor:pointer;
+  box-shadow:0 3px 12px rgba(26,115,232,.3);
+  transition:background .12s,transform .08s;
+  position:sticky;
+  bottom:max(env(safe-area-inset-bottom,0px),12px);
+}
+.btn:active{background:var(--primary-d);transform:scale(.99);}
+.btn:disabled{background:#b0bec5;box-shadow:none;cursor:default;}
+#result{display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;}
+#result h2{font-size:26px;color:#16a34a;margin-bottom:12px;font-weight:800;}
+#result p{font-size:16px;color:#4a5563;line-height:1.7;}
+#loading{flex:1;display:flex;align-items:center;justify-content:center;font-size:15px;color:#9aa5b4;}
+</style>
+</head>
+<body>
+<div class="card">
+
+  <div id="loading">読み込み中...</div>
+
+  <div id="form-area" style="display:none;flex:1;flex-direction:column;">
+    <h1>📝 プロフィール登録・更新</h1>
+    <p class="sub">年末調整・源泉徴収に使います。いつでも更新できます。</p>
+
+    <div class="field">
+      <label>お名前<span class="req">*</span></label>
+      <input type="text" id="name-input" placeholder="例：山田 太郎" maxlength="50" oninput="checkInput()">
+      <div class="error" id="err-name">お名前を入力してください</div>
+    </div>
+
+    <div class="field">
+      <label>フリガナ<span class="opt">任意</span></label>
+      <input type="text" id="furigana-input" placeholder="例：ヤマダ タロウ" maxlength="50">
+    </div>
+
+    <div class="field">
+      <label>携帯番号<span class="req">*</span></label>
+      <input type="text" inputmode="numeric" id="phone-input" placeholder="例：09012345678" maxlength="20" oninput="checkInput()">
+      <div class="error" id="err-phone">携帯番号を入力してください</div>
+    </div>
+
+    <div class="field">
+      <label>郵便番号・住所<span class="req">*</span></label>
+      <div class="zip-row">
+        <input type="text" id="zip-input" placeholder="860-0001" maxlength="8" oninput="onZipInput()">
+        <input type="text" id="address-input" placeholder="熊本市中央区〇〇" maxlength="100" oninput="checkInput()">
+      </div>
+      <p class="field-hint">郵便番号はハイフンあり/なし両対応</p>
+      <div class="error" id="err-address">住所を入力してください</div>
+    </div>
+
+    <button class="btn" id="submit-btn" onclick="submitRegister()" disabled>登録する</button>
+  </div>
+
+  <div id="result">
+    <h2>✅ 登録完了！</h2>
+    <p id="result-msg">ご登録ありがとうございます。</p>
+  </div>
+
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+var TOKEN   = '<?= token ?>';
+var LIFF_ID = '<?= liffId ?>';
+var _userId = null;
+
+window.addEventListener('load', function() {
+  if (LIFF_ID) {
+    liff.init({ liffId: LIFF_ID })
+      .then(function() {
+        if (!liff.isLoggedIn()) { liff.login(); return; }
+        return liff.getProfile();
+      })
+      .then(function(profile) {
+        if (!profile) return;
+        _userId = profile.userId;
+        google.script.run
+          .withSuccessHandler(function(j) { prefillForm(j); showForm(); })
+          .withFailureHandler(function()   { showForm(); })
+          .api_getMyProfile(_userId);
+      })
+      .catch(function() {
+        if (TOKEN) {
+          google.script.run
+            .withSuccessHandler(function(j) { prefillForm(j); showForm(); })
+            .withFailureHandler(function()   { showForm(); })
+            .api_getProfileByToken(TOKEN);
+        } else {
+          showError('LINEから再度お試しください。');
+        }
+      });
+  } else if (TOKEN) {
+    google.script.run
+      .withSuccessHandler(function(j) { prefillForm(j); showForm(); })
+      .withFailureHandler(function()   { showForm(); })
+      .api_getProfileByToken(TOKEN);
+  } else {
+    showError('アクセストークンが無効です。');
+  }
+});
+
+function showForm() {
+  document.getElementById('loading').style.display = 'none';
+  var fa = document.getElementById('form-area');
+  fa.style.display = 'flex';
+}
+
+function showError(msg) {
+  var el = document.getElementById('loading');
+  el.innerHTML = '<p style="color:#ea4335;font-size:14px;text-align:center;"></p>';
+  el.querySelector('p').textContent = msg;
+}
+
+function prefillForm(json) {
+  try {
+    var d = JSON.parse(json);
+    if (!d.ok) return;
+    if (d.name)       document.getElementById('name-input').value     = d.name;
+    if (d.furigana)   document.getElementById('furigana-input').value = d.furigana;
+    if (d.phone)      document.getElementById('phone-input').value    = d.phone;
+    if (d.zip_code)   document.getElementById('zip-input').value      = d.zip_code;
+    if (d.address)    document.getElementById('address-input').value  = d.address;
+    checkInput();
+  } catch(_) {}
+}
+
+function checkInput() {
+  var name  = document.getElementById('name-input').value.trim();
+  var phone = document.getElementById('phone-input').value.trim();
+  var addr  = document.getElementById('address-input').value.trim();
+  document.getElementById('submit-btn').disabled = !(name && phone && addr);
+  document.getElementById('err-name').style.display    = 'none';
+  document.getElementById('err-phone').style.display   = 'none';
+  document.getElementById('err-address').style.display = 'none';
+}
+
+function submitRegister() {
+  var name     = document.getElementById('name-input').value.trim();
+  var furigana = document.getElementById('furigana-input').value.trim();
+  var phone    = document.getElementById('phone-input').value.trim();
+  var zip      = document.getElementById('zip-input').value.replace(/[^\d]/g,'').trim();
+  var addr     = document.getElementById('address-input').value.trim();
+  if (!name)  { document.getElementById('err-name').style.display    = 'block'; return; }
+  if (!phone) { document.getElementById('err-phone').style.display   = 'block'; return; }
+  if (!addr)  { document.getElementById('err-address').style.display = 'block'; return; }
+
+  var zipFormatted = zip.length === 7 ? zip.slice(0,3) + '-' + zip.slice(3) : zip;
+  var btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = '登録中...';
+
+  function onSuccess(json) {
+    var r;
+    try { r = JSON.parse(json); } catch(_) { onFail({ message: 'サーバーから不正なレスポンスが返りました' }); return; }
+    if (!r.ok) { onFail({ message: r.msg || 'エラーが発生しました' }); return; }
+    document.getElementById('form-area').style.display = 'none';
+    var res = document.getElementById('result');
+    res.style.display = 'flex';
+    document.getElementById('result-msg').textContent = name + 'さん、登録ありがとうございます！';
+  }
+  function onFail(err) {
+    btn.disabled = false;
+    btn.textContent = '登録する';
+    alert('エラー: ' + (err.message || err));
+  }
+
+  if (_userId) {
+    google.script.run.withSuccessHandler(onSuccess).withFailureHandler(onFail)
+      .api_registerFromLiff(_userId, name, phone, zipFormatted, addr, '', furigana, '');
+  } else {
+    google.script.run.withSuccessHandler(onSuccess).withFailureHandler(onFail)
+      .api_registerFromForm(TOKEN, name, phone, zipFormatted, addr, '', furigana, '');
+  }
+}
+
+function onZipInput() {
+  var v = document.getElementById('zip-input').value.replace(/[^\d]/g,'');
+  if (v.length > 7) v = v.slice(0, 7);
+  if (v.length >= 4) v = v.slice(0,3) + '-' + v.slice(3);
+  document.getElementById('zip-input').value = v;
+  checkInput();
+}
+</script>
+</body>
+</html>
