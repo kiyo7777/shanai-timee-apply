@@ -72,9 +72,8 @@ h1{font-size:26px;font-weight:800;color:var(--primary);margin-bottom:6px;letter-
 .status-badge{font-size:13px;font-weight:800;padding:4px 10px;border-radius:20px;flex-shrink:0;}
 .status-badge.applied{color:#a15c00;background:#fff2df;}
 .status-badge.approved{color:#166534;background:#dcfce7;}
-/* 日付ごとの人数・募集中バッジ */
+/* 募集中バッジ */
 .date-info{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
-.date-count{font-size:13px;font-weight:700;color:#5f6b7a;white-space:nowrap;}
 .tag-recruit{font-size:12px;font-weight:800;color:#fff;background:#1a73e8;border-radius:20px;padding:2px 9px;white-space:nowrap;}
 
 .err{color:#d93025;font-size:15px;font-weight:600;margin:12px 0;display:none;}
@@ -199,16 +198,11 @@ function init(data) {
   }
   var dateStatus = data.dateStatus || {};
   var STATUS_LABEL = { applied: '応募中', approved: '確定' };
-  // 日付ごとの人数（応募中・確定）と募集中の日。氏名は表示しない
-  var counts = data.counts || {};
+  // 募集のお知らせを出している日
   var recruitSet = {};
   (data.recruitDates || []).forEach(function(x) { recruitSet[x] = true; });
   function infoHtml(ds) {
-    var c = counts[ds] || { applied: 0, approved: 0 };
-    return '<span class="date-info">' +
-      (recruitSet[ds] ? '<span class="tag-recruit">募集中</span>' : '') +
-      '<span class="date-count">応募中 ' + (Number(c.applied) || 0) + '名・確定 ' + (Number(c.approved) || 0) + '名</span>' +
-      '</span>';
+    return recruitSet[ds] ? '<span class="date-info"><span class="tag-recruit">募集中</span></span>' : '';
   }
   renderDates.forEach(function(ds) {
     var parts = ds.split('-').map(Number);
