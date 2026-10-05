@@ -72,6 +72,10 @@ h1{font-size:26px;font-weight:800;color:var(--primary);margin-bottom:6px;letter-
 .status-badge{font-size:13px;font-weight:800;padding:4px 10px;border-radius:20px;flex-shrink:0;}
 .status-badge.applied{color:#a15c00;background:#fff2df;}
 .status-badge.approved{color:#166534;background:#dcfce7;}
+/* 日付ごとの人数・募集中バッジ */
+.date-info{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
+.date-count{font-size:13px;font-weight:700;color:#5f6b7a;white-space:nowrap;}
+.tag-recruit{font-size:12px;font-weight:800;color:#fff;background:#1a73e8;border-radius:20px;padding:2px 9px;white-space:nowrap;}
 
 .err{color:#d93025;font-size:15px;font-weight:600;margin:12px 0;display:none;}
 
@@ -105,7 +109,7 @@ h1{font-size:26px;font-weight:800;color:var(--primary);margin-bottom:6px;letter-
   <div id="form-area" style="display:none;">
     <h1>&#x1F4C5; シフト応募</h1>
     <p id="greeting" class="greeting" style="display:none;"></p>
-    <p class="sub">職種を選んでから、希望の日程を選んでください</p>
+    <p class="sub">職種を選んでから、希望の日程を選んでください<br>今日から30日間の日程から選べます（青い「募集中」は募集のお知らせを出している日です）</p>
 
     <div class="step-label">① 職種を選択</div>
     <div id="job-list"></div>
@@ -195,6 +199,17 @@ function init(data) {
   }
   var dateStatus = data.dateStatus || {};
   var STATUS_LABEL = { applied: '応募中', approved: '確定' };
+  // 日付ごとの人数（応募中・確定）と募集中の日。氏名は表示しない
+  var counts = data.counts || {};
+  var recruitSet = {};
+  (data.recruitDates || []).forEach(function(x) { recruitSet[x] = true; });
+  function infoHtml(ds) {
+    var c = counts[ds] || { applied: 0, approved: 0 };
+    return '<span class="date-info">' +
+      (recruitSet[ds] ? '<span class="tag-recruit">募集中</span>' : '') +
+      '<span class="date-count">応募中 ' + (Number(c.applied) || 0) + '名・確定 ' + (Number(c.approved) || 0) + '名</span>' +
+      '</span>';
+  }
   renderDates.forEach(function(ds) {
     var parts = ds.split('-').map(Number);
     var d = new Date(parts[0], parts[1]-1, parts[2]);
@@ -209,12 +224,12 @@ function init(data) {
       // 応募済み・確定済みの日程は選択できないようにし、状態バッジを表示する
       item.classList.add('status-locked');
       item.innerHTML = '<span class="date-label" style="color:#8b95a3;">'+label+'</span>' +
-        '<span class="status-badge ' + status + '">' + STATUS_LABEL[status] + '</span>';
+        '<span class="status-badge ' + status + '">' + STATUS_LABEL[status] + '</span>' + infoHtml(normalizedDs);
       dateList.appendChild(item);
       return;
     }
 
-    item.innerHTML = '<input type="checkbox" id="cb-'+normalizedDs+'" value="'+normalizedDs+'"> <label for="cb-'+normalizedDs+'" class="date-label">'+label+'</label>';
+    item.innerHTML = '<input type="checkbox" id="cb-'+normalizedDs+'" value="'+normalizedDs+'"> <label for="cb-'+normalizedDs+'" class="date-label">'+label+'</label>' + infoHtml(normalizedDs);
     item.onclick = function(e) {
       if (e.target.tagName === 'INPUT') return;
       var cb = this.querySelector('input[type=checkbox]');
