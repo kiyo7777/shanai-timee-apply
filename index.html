@@ -39,14 +39,6 @@ h1{font-size:26px;font-weight:800;color:var(--primary);margin-bottom:6px;letter-
   padding-left:10px;border-left:4px solid var(--primary);
 }
 
-/* 使い方動画 */
-.guide{border:2px solid var(--line);border-radius:16px;margin-bottom:24px;overflow:hidden;}
-.guide summary{padding:14px 18px;font-size:16px;font-weight:800;color:var(--primary);cursor:pointer;list-style:none;}
-.guide summary::-webkit-details-marker{display:none;}
-.guide summary::after{content:'▼';float:right;font-size:12px;color:var(--sub);}
-.guide[open] summary::after{content:'▲';}
-.guide video{display:block;width:100%;max-height:70vh;background:#000;}
-
 /* 職種 */
 .job-item{
   display:flex;align-items:flex-start;gap:14px;
@@ -117,11 +109,6 @@ h1{font-size:26px;font-weight:800;color:var(--primary);margin-bottom:6px;letter-
     <h1>&#x1F4C5; シフト応募</h1>
     <p id="greeting" class="greeting" style="display:none;"></p>
     <p class="sub">職種を選んでから、希望の日程を選んでください<br>今日から30日間の日程から選べます（青い「募集中」は募集のお知らせを出している日です）</p>
-
-    <details class="guide">
-      <summary>&#x1F3AC; 使い方動画を見る</summary>
-      <video src="assets/guide.mp4" controls playsinline preload="none"></video>
-    </details>
 
     <div class="step-label">① 職種を選択</div>
     <div id="job-list"></div>
